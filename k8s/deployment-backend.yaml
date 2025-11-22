@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: default
+  labels:
+    app: backend
+    component: web
+spec:
+  replicas: 2  # Pour la haute disponibilité
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        component: web
+    spec:
+      containers:
+      - name: backend
+        image: myasso-backend:latest  # Changez cette image selon votre registry
+        # Si vous utilisez une image locale, utilisez: imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: node-env
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: port
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: db-host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: db-port
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: db-user
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: myasso-config
+              key: db-name
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: myasso-secrets
+              key: mysql-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: myasso-secrets
+              key: jwt-secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      # Attendre que MySQL soit prêt avant de démarrer le backend
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          until nc -z mysql-service 3306; do
+            echo "En attente de MySQL..."
+            sleep 2
+          done
+          echo "MySQL est prêt !"
+

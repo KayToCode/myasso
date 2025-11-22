@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myasso-config
+  namespace: default
+data:
+  # Configuration MySQL
+  mysql-database: myasso
+  mysql-user: myasso
+  mysql-port: "3306"
+  
+  # Configuration Backend
+  node-env: production
+  port: "3000"
+  db-host: mysql-service
+  db-port: "3306"
+  db-name: myasso
+  db-user: myasso
+
