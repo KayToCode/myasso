@@ -369,6 +369,12 @@ kubectl logs -l app=mysql --tail=20
 
 **⏱️ Temps** : 30-60 secondes
 
+**💡 Important - Initialisation de la Base de Données** :
+- Le script SQL dans `configmap-init-db.yaml` est exécuté **automatiquement au premier démarrage de MySQL**
+- Le script crée toutes les tables nécessaires (`associations`, `benevoles`, `evenements`, etc.)
+- **Cette initialisation n'a lieu qu'une seule fois** car MySQL ne réexécute les scripts de `/docker-entrypoint-initdb.d/` que si le répertoire `/var/lib/mysql` est vide
+- Grâce au PVC (PersistentVolumeClaim), les données sont conservées entre les redémarrages, donc le script ne sera **PAS réexécuté** lors des prochains déploiements
+
 #### 4.7. Déployer le Backend
 ```powershell
 # Déployer les Pods Backend (2 répliques pour la haute disponibilité)
@@ -739,6 +745,8 @@ minikube service backend-service
 
 **💡 Les Pods redémarrent automatiquement** : Kubernetes redémarrera automatiquement les Pods qui étaient en cours d'exécution avant l'arrêt de Minikube.
 
+**💡 Concernant la base de données** : Le script SQL d'initialisation (`configmap-init-db.yaml`) est exécuté **UNIQUEMENT au premier démarrage de MySQL**. Si vous avez déjà déployé l'application une fois, les données sont stockées dans un volume persistant (PVC). Même si vous redémarrez Minikube ou redéployez le backend, les données existantes sont conservées et le script SQL n'est **PAS réexécuté**.
+
 #### Option B : Si Minikube est Déjà Démarré
 
 ```powershell
@@ -901,6 +909,103 @@ kubectl get services
 
 ---
 
+## ❓ Questions Fréquentes sur la Base de Données
+
+### 🔄 Comment fonctionne l'initialisation de la base de données ?
+
+#### À la première installation
+Quand vous déployez l'application pour la première fois :
+
+1. Le PVC (PersistentVolumeClaim) est créé - c'est un volume vide de 10Gi
+2. MySQL démarre et voit que le volume est vide
+3. MySQL exécute automatiquement tous les scripts présents dans `/docker-entrypoint-initdb.d/`
+4. Le script `01-init.sql` (depuis `configmap-init-db.yaml`) crée :
+   - La base de données `myasso`
+   - Toutes les tables nécessaires (associations, benevoles, evenements, etc.)
+5. ✅ **La base de données est prête à être utilisée**
+
+#### Lors des déploiements suivants
+- Si vous redéployez l'application ou redémarrez Minikube :
+  - Le PVC existe toujours avec les données
+  - MySQL voit que le volume n'est pas vide
+  - ❌ **Le script SQL n'est PAS réexécuté**
+  - ✅ **Toutes vos données sont conservées** (utilisateurs, événements, etc.)
+
+### 🔄 Que se passe-t-il si je modifie le script SQL dans `configmap-init-db.yaml` ?
+
+**⚠️ Important** : Modifier le script SQL dans `configmap-init-db.yaml` **ne met pas automatiquement à jour** la base de données existante.
+
+Le script n'est exécuté qu'au premier démarrage. Si vous avez déjà une base de données avec des données :
+
+#### Option 1 : Mettre à jour manuellement (Recommandé pour la production)
+Exécuter des migrations SQL manuellement :
+```powershell
+# Se connecter au Pod MySQL
+kubectl exec -it deployment/mysql-deployment -- mysql -uroot -p
+
+# Entrer le mot de passe root (depuis secret.yaml)
+# Puis exécuter vos modifications SQL manuellement
+USE myasso;
+ALTER TABLE ... -- Vos modifications
+```
+
+#### Option 2 : Recréer la base de données (⚠️ Supprime toutes les données)
+Si vous êtes en développement et voulez repartir de zéro :
+```powershell
+# ⚠️ ATTENTION : Cela supprime TOUTES les données !
+# 1. Supprimer le PVC
+kubectl delete pvc mysql-pvc
+
+# 2. Supprimer le Pod MySQL
+kubectl delete deployment mysql-deployment
+
+# 3. Appliquer le nouveau ConfigMap avec les modifications
+kubectl apply -f k8s/configmap-init-db.yaml
+
+# 4. Recréer le PVC
+kubectl apply -f k8s/persistentvolumeclaim.yaml
+
+# 5. Redéployer MySQL (le nouveau script sera exécuté)
+kubectl apply -f k8s/deployment-mysql.yaml
+kubectl apply -f k8s/service-db.yaml
+```
+
+### 🔄 Est-ce que la base de données se met à jour quand je push du code ?
+
+**Non**. Voici comment ça fonctionne :
+
+1. **Le code de l'application** (frontend/backend) : 
+   - Quand vous modifiez et poussez le code
+   - Vous devez reconstruire l'image Docker : `docker build -t myasso-backend:latest .`
+   - Redémarrer les Pods backend : `kubectl rollout restart deployment/backend-deployment`
+   - ✅ Les modifications du code sont prises en compte
+
+2. **Le script SQL d'initialisation** :
+   - Quand vous modifiez `configmap-init-db.yaml` et poussez
+   - Vous devez appliquer le ConfigMap : `kubectl apply -f k8s/configmap-init-db.yaml`
+   - ❌ **MAIS** le script ne sera PAS réexécuté car la base existe déjà
+   - Les modifications du script ne sont appliquées que si vous recréez la base (Option 2 ci-dessus)
+
+### 💾 Pourquoi la base de données est-elle persistante ?
+
+Grâce au **PersistentVolumeClaim (PVC)** :
+- Les données MySQL sont stockées dans un volume persistant de 10Gi
+- Ce volume survit aux redémarrages de Pods et de Minikube
+- Même si vous supprimez et recréez les Pods MySQL, les données restent
+- C'est ce qui permet la persistance des données
+
+### 📝 Résumé Simple
+
+| Situation | Script SQL exécuté ? | Données conservées ? |
+|-----------|---------------------|---------------------|
+| **Première installation** | ✅ Oui (automatiquement) | ✅ Base créée |
+| **Redémarrage Minikube** | ❌ Non | ✅ Oui (toutes les données) |
+| **Redéploiement backend** | ❌ Non | ✅ Oui |
+| **Redéploiement MySQL** | ❌ Non (volume existe) | ✅ Oui |
+| **Modification script SQL** | ❌ Non (base existe) | ✅ Oui (sauf si PVC supprimé) |
+
+---
+
 ## 📚 Documentation des Paramètres de Configuration
 
 Cette section explique tous les paramètres de configuration et comment les modifier pour adapter le déploiement à d'autres environnements.
@@ -969,13 +1074,23 @@ Les ConfigMaps contiennent des configurations non sensibles.
 
 **Fichier** : `k8s/configmap-init-db.yaml`
 
-Ce fichier contient le script SQL qui crée toutes les tables au démarrage de MySQL.
+Ce fichier contient le script SQL qui crée toutes les tables au **premier démarrage de MySQL uniquement**.
 
 #### Structure
 
 - **Fichier SQL** : `01-init.sql`
-- **Exécution** : Automatique au premier démarrage de MySQL
+- **Exécution** : ⚠️ **Automatique UNIQUEMENT au premier démarrage de MySQL** (quand le volume est vide)
 - **Emplacement** : Monté dans `/docker-entrypoint-initdb.d/` du conteneur MySQL
+- **Important** : MySQL ne réexécute les scripts que si `/var/lib/mysql` est vide
+
+#### ⚠️ Comportement Important
+
+| Situation | Le script est-il exécuté ? |
+|-----------|---------------------------|
+| Premier déploiement (volume vide) | ✅ OUI - Toutes les tables sont créées |
+| Redémarrage de Minikube | ❌ NON - Les données existent déjà |
+| Redéploiement de MySQL | ❌ NON - Le PVC existe avec des données |
+| Modification du script + nouveau déploiement | ❌ NON - La base existe déjà |
 
 #### Modifications Possibles
 
@@ -983,26 +1098,40 @@ Ce fichier contient le script SQL qui crée toutes les tables au démarrage de M
 2. **Ajouter des données initiales** : Ajoutez des `INSERT` après les `CREATE TABLE`
 3. **Modifier le schéma** : Modifiez les définitions de tables existantes
 
-#### Comment Modifier
+#### Comment Modifier le Script
 
 1. Ouvrez `k8s/configmap-init-db.yaml`
 2. Modifiez le contenu dans `data.01-init.sql`
 3. Sauvegardez le fichier
 4. Appliquez les modifications : `kubectl apply -f k8s/configmap-init-db.yaml`
-5. **⚠️ Important** : Pour que les modifications prennent effet, vous devez supprimer le PVC et le recréer :
-   ```powershell
-   # Supprimer le PVC (⚠️ cela supprime toutes les données)
-   kubectl delete pvc mysql-pvc
-   
-   # Supprimer le Pod MySQL
-   kubectl delete deployment mysql-deployment
-   
-   # Recréer le PVC
-   kubectl apply -f k8s/persistentvolumeclaim.yaml
-   
-   # Redéployer MySQL (le script sera réexécuté)
-   kubectl apply -f k8s/deployment-mysql.yaml
-   ```
+
+**⚠️ IMPORTANT** : Appliquer le ConfigMap modifié **ne réexécute pas** le script sur une base existante !
+
+#### Pour Appliquer les Modifications du Script SQL
+
+**Option 1 : Migration SQL Manuelle (Recommandé pour la production)**
+```powershell
+# Se connecter au Pod MySQL et exécuter les modifications manuellement
+kubectl exec -it deployment/mysql-deployment -- mysql -uroot -p
+# Puis exécuter vos ALTER TABLE, CREATE TABLE, etc.
+```
+
+**Option 2 : Recréer la Base de Données (⚠️ Supprime TOUTES les données)**
+```powershell
+# ⚠️ ATTENTION : Cela supprime toutes les données existantes !
+# 1. Supprimer le PVC
+kubectl delete pvc mysql-pvc
+
+# 2. Supprimer le Pod MySQL
+kubectl delete deployment mysql-deployment
+
+# 3. Recréer le PVC (vide)
+kubectl apply -f k8s/persistentvolumeclaim.yaml
+
+# 4. Redéployer MySQL (le nouveau script sera exécuté)
+kubectl apply -f k8s/deployment-mysql.yaml
+kubectl apply -f k8s/service-db.yaml
+```
 
 ---
 
