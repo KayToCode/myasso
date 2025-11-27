@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Bénévole</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MyAsso</h1>
+            <nav>
+                <a href="index.html">🏠 Accueil</a>
+                <a href="associations.html">🏛️ Associations</a>
+                <a href="dashboard-benevole.html" class="active">📊 Tableau de bord</a>
+                <a href="javascript:void(0)" onclick="switchToProfilTab();">👤 Profil</a>
+                <div id="notificationBadge" style="display: none;">
+                    <a href="#" onclick="switchTab('notifications'); return false;">
+                        🔔 Notifications (<span id="notificationCount">0</span>)
+                    </a>
+                </div>
+                <a href="#" id="logoutBtn">🚪 Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2>Tableau de bord - Bénévole</h2>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('evenements')">Mes événements</button>
+            <button class="tab" onclick="switchTab('assignations')">Mes assignations</button>
+            <button class="tab" onclick="switchTab('associations')">Mes associations</button>
+            <button class="tab" onclick="switchTab('annonces')">Annonces</button>
+            <button class="tab" onclick="switchTab('notifications')">Notifications</button>
+            <button class="tab" onclick="switchTab('profil')">Profil</button>
+        </div>
+
+        <!-- Événements -->
+        <div id="tabEvenements" class="tab-content active">
+            <h3>Événements disponibles</h3>
+            <div id="eventsList"></div>
+        </div>
+
+        <!-- Assignations -->
+        <div id="tabAssignations" class="tab-content">
+            <h3>Mes assignations</h3>
+            <div id="assignationsList"></div>
+        </div>
+
+        <!-- Associations -->
+        <div id="tabAssociations" class="tab-content">
+            <h3>Mes associations</h3>
+            <div id="associationsList"></div>
+        </div>
+
+        <!-- Annonces -->
+        <div id="tabAnnonces" class="tab-content">
+            <h3>Annonces des associations</h3>
+            <div id="annoncesList"></div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="tabNotifications" class="tab-content">
+            <div class="card-header">
+                <h3>Mes notifications</h3>
+                <button class="btn btn-secondary" onclick="marquerToutLu()">Tout marquer comme lu</button>
+            </div>
+            <div id="notificationsList"></div>
+        </div>
+
+        <!-- Profil -->
+        <div id="tabProfil" class="tab-content">
+            <h3>Mon profil</h3>
+            <div class="form-container">
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="profile_nom">Nom</label>
+                        <input type="text" id="profile_nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_prenom">Prénom</label>
+                        <input type="text" id="profile_prenom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_telephone">Téléphone</label>
+                        <input type="tel" id="profile_telephone">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/toast.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard-benevole.js"></script>
+</body>
+</html>
+

@@ -35,6 +35,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'API is running' });
 });
 
+// Servir les fichiers statiques du frontend
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Route pour servir index.html pour toutes les routes frontend (doit être en dernier)
+app.get('*', (req, res) => {
+  // Ne servir index.html que si ce n'est pas une route API
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  }
+});
+
 // Test database connection
 db.getConnection((err, connection) => {
   if (err) {

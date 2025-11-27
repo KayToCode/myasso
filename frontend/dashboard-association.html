@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Association</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MyAsso</h1>
+            <nav>
+                <a href="index.html">🏠 Accueil</a>
+                <a href="dashboard-association.html" class="active">📊 Tableau de bord</a>
+                <a href="javascript:void(0)" onclick="switchToProfilTab();">👤 Profil</a>
+                <a href="#" id="logoutBtn">🚪 Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2>Tableau de bord - Association</h2>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">Tableau de bord</button>
+            <button class="tab" onclick="switchTab('evenements')">Événements</button>
+            <button class="tab" onclick="switchTab('benevoles')">Bénévoles</button>
+            <button class="tab" onclick="switchTab('demandes')">Demandes</button>
+            <button class="tab" onclick="switchTab('annonces')">Annonces</button>
+            <button class="tab" onclick="switchTab('profil')">Profil</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="tabDashboard" class="tab-content active">
+            <h3>Vue d'ensemble</h3>
+            <div id="dashboardStats" class="stats"></div>
+            <h3>Créneaux / Tâches manquants</h3>
+            <div id="dashboardManquants"></div>
+        </div>
+
+        <!-- Événements -->
+        <div id="tabEvenements" class="tab-content">
+            <div class="card-header">
+                <h3>Mes événements</h3>
+                <button class="btn btn-primary" onclick="showCreateEventForm()">Créer un événement</button>
+            </div>
+            <div id="eventsList"></div>
+            
+            <!-- Formulaire création événement -->
+            <div id="createEventForm" style="display: none;" class="form-container">
+                <h3>Créer un événement</h3>
+                <form id="newEventForm">
+                    <div class="form-group">
+                        <label for="event_titre">Titre *</label>
+                        <input type="text" id="event_titre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event_description">Description</label>
+                        <textarea id="event_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="event_date_debut">Date de début *</label>
+                        <input type="datetime-local" id="event_date_debut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event_date_fin">Date de fin *</label>
+                        <input type="datetime-local" id="event_date_fin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event_type">Type de planification *</label>
+                        <select id="event_type" required onchange="togglePlanningType()">
+                            <option value="creneaux">Créneaux horaires</option>
+                            <option value="taches">Tâches</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Créneaux -->
+                    <div id="creneauxSection">
+                        <h4>Créneaux</h4>
+                        <div id="creneauxList"></div>
+                        <button type="button" class="btn btn-secondary" onclick="addCreneau()">Ajouter un créneau</button>
+                    </div>
+                    
+                    <!-- Tâches -->
+                    <div id="tachesSection" style="display: none;">
+                        <h4>Tâches</h4>
+                        <div id="tachesList"></div>
+                        <button type="button" class="btn btn-secondary" onclick="addTache()">Ajouter une tâche</button>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Créer l'événement</button>
+                    <button type="button" class="btn btn-secondary" onclick="cancelCreateEvent()">Annuler</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bénévoles -->
+        <div id="tabBenevoles" class="tab-content">
+            <h3>Bénévoles acceptés</h3>
+            <div id="benevolesList"></div>
+        </div>
+
+        <!-- Demandes -->
+        <div id="tabDemandes" class="tab-content">
+            <h3>Demandes d'adhésion en attente</h3>
+            <div id="demandesList"></div>
+        </div>
+
+        <!-- Annonces -->
+        <div id="tabAnnonces" class="tab-content">
+            <div class="card-header">
+                <h3>Mes annonces</h3>
+                <button class="btn btn-primary" onclick="showCreateAnnonceForm()">Nouvelle annonce</button>
+            </div>
+            <div id="annoncesList"></div>
+            
+            <!-- Formulaire création annonce -->
+            <div id="createAnnonceForm" style="display: none;" class="form-container">
+                <h3>Créer une annonce</h3>
+                <form id="newAnnonceForm">
+                    <div class="form-group">
+                        <label for="annonce_titre">Titre *</label>
+                        <input type="text" id="annonce_titre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="annonce_contenu">Contenu *</label>
+                        <textarea id="annonce_contenu" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Publier</button>
+                    <button type="button" class="btn btn-secondary" onclick="cancelCreateAnnonce()">Annuler</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Profil -->
+        <div id="tabProfil" class="tab-content">
+            <h3>Mon profil</h3>
+            <div class="form-container">
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="profile_nom">Nom</label>
+                        <input type="text" id="profile_nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_description">Description</label>
+                        <textarea id="profile_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_activites">Activités</label>
+                        <textarea id="profile_activites"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile_besoins">Besoins</label>
+                        <textarea id="profile_besoins"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/toast.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard-association.js"></script>
+</body>
+</html>
+

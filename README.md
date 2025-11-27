@@ -1,264 +1,149 @@
 # 🚀 MyAsso - Application Web avec Base de Données sur Kubernetes
 
-**Projet de Déploiement d'une Application Web Node.js avec Base de Données MySQL sur un Cluster Kubernetes**
+**Plateforme de gestion des associations et bénévoles déployée sur Kubernetes**
+
+---
 
 ## 📋 Table des Matières
 
 1. [Vue d'ensemble](#vue-densemble)
-2. [Architecture du Système](#architecture-du-système)
-3. [Composants Kubernetes](#composants-kubernetes)
+2. [Structure du Projet](#structure-du-projet)
+3. [Comment ça fonctionne](#comment-ça-fonctionne)
 4. [Prérequis](#prérequis)
-5. [Installation et Déploiement](#installation-et-déploiement)
-6. [Fonctionnement Détaillé](#fonctionnement-détaillé)
-7. [Guide d'Utilisation](#guide-dutilisation)
-8. [Dépannage](#dépannage)
-9. [Tests et Validation](#tests-et-validation)
+5. [Comment lancer le projet](#comment-lancer-le-projet)
+6. [Dépannage](#dépannage)
 
 ---
 
 ## 🎯 Vue d'ensemble
 
-### Description du Projet
+### Description
 
-Ce projet déploie une application web **Node.js** (MyAsso - plateforme de gestion des associations et bénévoles) connectée à une base de données **MySQL** sur un cluster **Kubernetes**.
-
-### Objectifs
-
-- Déployer une base de données MySQL comme Pod Kubernetes
-- Déployer une application web Node.js comme Pod Kubernetes
-- Configurer la communication interne via un Service ClusterIP
-- Exposer l'application web à l'extérieur via un Service NodePort
-- Gérer la configuration via Secrets et ConfigMaps
-- Garantir la persistance des données avec un PersistentVolumeClaim
-
-### Technologies Utilisées
-
+MyAsso est une application web qui permet aux associations locales de gérer leurs événements et de coordonner leurs bénévoles. L'application est déployée sur Kubernetes avec :
 - **Backend** : Node.js avec Express.js
 - **Base de données** : MySQL 8.0
+- **Frontend** : HTML, CSS, JavaScript (pur)
 - **Containerisation** : Docker
 - **Orchestration** : Kubernetes
-- **API** : REST API avec authentification JWT
 
----
-
-## 🏗️ Architecture du Système
-
-### Vue d'ensemble de l'Architecture
+### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Cluster Kubernetes                        │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │              Namespace: default                      │  │
-│  │                                                       │  │
-│  │  ┌──────────────────────────────────────────────┐   │  │
-│  │  │         MySQL Database Pod                   │   │  │
-│  │  │  ┌────────────────────────────────────┐     │   │  │
-│  │  │  │  Container: mysql                  │     │   │  │
-│  │  │  │  Image: mysql:8.0                  │     │   │  │
-│  │  │  │  Port: 3306                        │     │   │  │
-│  │  │  └────────────────────────────────────┘     │   │  │
-│  │  │  ┌────────────────────────────────────┐     │   │  │
-│  │  │  │  Volume: mysql-pvc (Persistent)    │     │   │  │
-│  │  │  │  Mount: /var/lib/mysql             │     │   │  │
-│  │  │  └────────────────────────────────────┘     │   │  │
-│  │  └──────────────────────────────────────────────┘   │  │
-│  │           │                                          │  │
-│  │           │ Service: mysql-service (ClusterIP)      │  │
-│  │           │ Port: 3306                              │  │
-│  │           │                                         │  │
-│  │  ┌──────────────────────────────────────────────┐   │  │
-│  │  │      Backend Application Pods (x2)           │   │  │
-│  │  │  ┌────────────────────────────────────┐     │   │  │
-│  │  │  │  Container: backend                │     │   │  │
-│  │  │  │  Image: myasso-backend:latest      │     │   │  │
-│  │  │  │  Port: 3000                        │     │   │  │
-│  │  │  │                                    │     │   │  │
-│  │  │  │  Env Vars:                         │     │   │  │
-│  │  │  │  - DB_HOST=mysql-service           │     │   │  │
-│  │  │  │  - DB_PORT=3306                    │     │   │  │
-│  │  │  │  - DB_USER=myasso                  │     │   │  │
-│  │  │  │  - DB_NAME=myasso                  │     │   │  │
-│  │  │  │  - DB_PASSWORD (from Secret)       │     │   │  │
-│  │  │  │  - JWT_SECRET (from Secret)        │     │   │  │
-│  │  │  └────────────────────────────────────┘     │   │  │
-│  │  └──────────────────────────────────────────────┘   │  │
-│  │           │                                          │  │
-│  │           │ Service: backend-service (NodePort)     │  │
-│  │           │ Port: 3000 -> NodePort: 30080          │  │
-│  │           │                                         │  │
-│  │  ┌──────────────────────────────────────────────┐   │  │
-│  │  │          ConfigMaps & Secrets               │   │  │
-│  │  │  - myasso-config (ports, names)             │   │  │
-│  │  │  - mysql-init-script (SQL schema)           │   │  │
-│  │  │  - myasso-secrets (passwords, JWT)          │   │  │
-│  │  └──────────────────────────────────────────────┘   │  │
-│  └───────────────────────────────────────────────────  │  │
-└─────────────────────────────────────────────────────────────┘
-           │
-           │ NodePort: 30080
-           ▼
-┌──────────────────────────────────────┐
-│        Utilisateurs Externes         │
-│    http://<NODE_IP>:30080            │
-└──────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│      Cluster Kubernetes (Minikube)      │
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │  MySQL Pod                        │  │
+│  │  - Base de données                │  │
+│  │  - Volume persistant (PVC)        │  │
+│  └──────────────┬────────────────────┘  │
+│                 │                        │
+│                 │ Service ClusterIP      │
+│                 │ (communication interne)│
+│                 │                        │
+│  ┌──────────────▼────────────────────┐  │
+│  │  Backend Pods (Node.js) x2        │  │
+│  │  - API REST                       │  │
+│  │  - Frontend servit statiquement   │  │
+│  └──────────────┬────────────────────┘  │
+└─────────────────┼────────────────────────┘
+                  │
+                  │ Service NodePort
+                  │ Port 30080
+                  ▼
+           http://localhost:30080
 ```
 
 ### Flux de Données
 
-1. **Utilisateur externe** → Accède via NodePort (30080)
-2. **NodePort Service** → Route vers un Pod backend disponible
-3. **Backend Pod** → Se connecte à MySQL via le Service ClusterIP `mysql-service`
-4. **MySQL Service** → Route vers le Pod MySQL
-5. **MySQL Pod** → Lit/écrit dans le volume persistant `mysql-pvc`
-
-### Communication Interne
-
-- **Backend ↔ MySQL** : Communication via DNS Kubernetes
-  - Le backend utilise `mysql-service` comme hostname
-  - Kubernetes résout automatiquement vers l'IP du service
-  - Le service route vers le Pod MySQL
+1. **Utilisateur** → Accède à l'application via le port 30080
+2. **Service NodePort** → Route vers un Pod backend disponible
+3. **Backend Pod** → Traite la requête (API ou fichier statique)
+4. **Si besoin de données** → Backend se connecte à MySQL via le Service ClusterIP
+5. **MySQL Pod** → Lit/écrit dans le volume persistant
 
 ---
 
-## 🔧 Composants Kubernetes
+## 📁 Structure du Projet
 
-### 1. Secrets (`k8s/secret.yaml`)
-
-**Rôle** : Stocker les informations sensibles de manière sécurisée.
-
-**Contenu** :
-- `mysql-root-password` : Mot de passe root MySQL
-- `mysql-password` : Mot de passe utilisateur MySQL
-- `jwt-secret` : Clé secrète pour l'authentification JWT
-
-**Utilisation** : Les Pods référencent ces secrets via `secretKeyRef` dans leurs variables d'environnement.
-
-```yaml
-env:
-  - name: DB_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: myasso-secrets
-        key: mysql-password
+```
+MyAsso/
+│
+├── Dockerfile                    # Image Docker du backend (inclut frontend)
+│
+├── backend/                      # Code source Node.js
+│   ├── config/
+│   │   ├── database.js          # Configuration MySQL
+│   │   └── database.sql         # Schéma SQL (tables, etc.)
+│   ├── routes/                  # Routes API (auth, events, etc.)
+│   ├── services/                # Logique métier (assignation auto)
+│   ├── middleware/              # Authentification JWT
+│   ├── server.js               # Serveur Express
+│   └── package.json            # Dépendances Node.js
+│
+├── frontend/                    # Interface utilisateur
+│   ├── css/style.css           # Styles
+│   ├── js/                     # JavaScript (API calls, etc.)
+│   └── *.html                  # Pages HTML
+│
+└── k8s/                         # Configuration Kubernetes
+    ├── secret.yaml             # Mots de passe (MySQL, JWT)
+    ├── configmap.yaml          # Configuration (ports, noms)
+    ├── configmap-init-db.yaml  # Script SQL d'initialisation
+    ├── persistentvolumeclaim.yaml  # Volume pour MySQL (persistance)
+    ├── deployment-mysql.yaml   # Pod MySQL
+    ├── deployment-backend.yaml # Pods Node.js (2 répliques)
+    ├── service-db.yaml         # Service ClusterIP (MySQL)
+    └── service-backend.yaml    # Service NodePort (Backend)
 ```
 
-### 2. ConfigMaps
+---
 
-#### a) `k8s/configmap.yaml`
-**Rôle** : Stocker la configuration non sensible.
+## 🔧 Comment ça fonctionne
 
-**Contenu** :
-- Noms de base de données
-- Ports
-- Variables d'environnement (NODE_ENV, PORT, etc.)
+### Composants Kubernetes
 
-#### b) `k8s/configmap-init-db.yaml`
-**Rôle** : Contient le script SQL d'initialisation de la base de données.
+#### 1. **MySQL Pod** (`deployment-mysql.yaml`)
+- Conteneur MySQL 8.0
+- Montage d'un volume persistant (PVC) pour sauvegarder les données
+- Script d'initialisation SQL au démarrage (via ConfigMap)
+- Health checks (vérifie que MySQL répond)
 
-**Utilisation** : Monté dans MySQL comme volume à `/docker-entrypoint-initdb.d/`, MySQL exécute automatiquement ces scripts au premier démarrage.
+#### 2. **Backend Pods** (`deployment-backend.yaml`)
+- Conteneur Node.js avec l'application
+- 2 répliques pour la disponibilité
+- Init container qui attend que MySQL soit prêt
+- Health checks (vérifie l'endpoint `/api/health`)
+- Variables d'environnement depuis Secrets et ConfigMaps
 
-### 3. PersistentVolumeClaim (`k8s/persistentvolumeclaim.yaml`)
+#### 3. **Services**
+- **mysql-service** (ClusterIP) : Communication interne uniquement
+  - Le backend se connecte via `mysql-service:3306`
+- **backend-service** (NodePort) : Exposition externe
+  - Accessible sur le port 30080 de tous les nœuds
 
-**Rôle** : Demander un volume de stockage persistant pour MySQL.
+#### 4. **Secrets** (`secret.yaml`)
+- Mots de passe MySQL (root et utilisateur)
+- Clé secrète JWT pour l'authentification
+- **⚠️ À modifier avant déploiement !**
 
-**Caractéristiques** :
-- **Taille** : 10Gi
-- **Mode d'accès** : ReadWriteOnce (un seul Pod peut écrire)
-- **Stockage** : Garantit que les données MySQL persistent même si le Pod est recréé
+#### 5. **ConfigMaps**
+- `configmap.yaml` : Configuration non sensible (ports, noms de BDD)
+- `configmap-init-db.yaml` : Script SQL pour créer les tables
 
-**Montage** : Le volume est monté dans MySQL à `/var/lib/mysql` (dossier par défaut de MySQL pour les données).
+#### 6. **PersistentVolumeClaim** (`persistentvolumeclaim.yaml`)
+- Volume de 10Gi pour MySQL
+- Les données persistent même si le Pod MySQL redémarre
 
-### 4. Deployment MySQL (`k8s/deployment-mysql.yaml`)
+### Fonctionnalités de l'Application
 
-**Rôle** : Gérer le Pod MySQL avec ses répliques.
-
-**Caractéristiques** :
-- **Réplicas** : 1 (une seule instance MySQL pour éviter les conflits de données)
-- **Image** : `mysql:8.0`
-- **Port** : 3306
-- **Variables d'environnement** :
-  - `MYSQL_ROOT_PASSWORD` : Depuis Secret
-  - `MYSQL_DATABASE` : Depuis ConfigMap
-  - `MYSQL_USER` : Depuis ConfigMap
-  - `MYSQL_PASSWORD` : Depuis Secret
-- **Volumes** :
-  - `mysql-data` : PersistentVolumeClaim pour la persistance
-  - `mysql-init` : ConfigMap contenant le script SQL
-- **Health Checks** :
-  - **Liveness Probe** : Vérifie que MySQL répond (`mysqladmin ping`)
-  - **Readiness Probe** : Vérifie que MySQL est prêt à accepter des connexions
-
-**Cycle de vie** :
-1. Le Pod démarre
-2. MySQL s'initialise avec les variables d'environnement
-3. Le script SQL dans le ConfigMap s'exécute automatiquement
-4. Les health checks vérifient que MySQL est opérationnel
-5. Le Pod devient "Ready"
-
-### 5. Service MySQL (`k8s/service-db.yaml`)
-
-**Rôle** : Exposer MySQL aux autres Pods dans le cluster.
-
-**Type** : **ClusterIP** (service interne uniquement, non accessible de l'extérieur)
-
-**Caractéristiques** :
-- **Nom DNS** : `mysql-service` (résolu automatiquement par Kubernetes)
-- **Port** : 3306
-- **Sélecteur** : `app: mysql` (route vers les Pods avec ce label)
-
-**Avantage** : 
-- Le backend se connecte à `mysql-service:3306` sans connaître l'IP réelle du Pod
-- Si le Pod MySQL est recréé avec une nouvelle IP, le Service continue de fonctionner
-
-### 6. Deployment Backend (`k8s/deployment-backend.yaml`)
-
-**Rôle** : Gérer les Pods de l'application Node.js.
-
-**Caractéristiques** :
-- **Réplicas** : 2 (haute disponibilité, load balancing automatique)
-- **Image** : `myasso-backend:latest`
-- **Port** : 3000
-- **Variables d'environnement** :
-  - `DB_HOST=mysql-service` (nom du service MySQL)
-  - `DB_PORT=3306`
-  - `DB_USER`, `DB_NAME` : Depuis ConfigMap
-  - `DB_PASSWORD`, `JWT_SECRET` : Depuis Secrets
-- **Init Container** : Attend que MySQL soit prêt avant de démarrer le backend
-  ```yaml
-  initContainers:
-    - name: wait-for-mysql
-      image: busybox
-      command: ['sh', '-c', 'until nc -z mysql-service 3306; do sleep 2; done']
-  ```
-- **Health Checks** :
-  - **Liveness Probe** : Vérifie `/api/health` toutes les 10 secondes
-  - **Readiness Probe** : Vérifie `/api/health` toutes les 5 secondes
-
-**Cycle de vie** :
-1. L'init container attend que MySQL soit disponible
-2. Le container backend démarre
-3. Le backend lit les variables d'environnement
-4. Le backend se connecte à MySQL via `mysql-service:3306`
-5. Les health checks vérifient que l'API répond
-6. Le Pod devient "Ready"
-
-### 7. Service Backend (`k8s/service-backend.yaml`)
-
-**Rôle** : Exposer l'application web à l'extérieur du cluster.
-
-**Type** : **NodePort** (accessible depuis l'extérieur via l'IP d'un nœud)
-
-**Caractéristiques** :
-- **Port interne** : 3000
-- **NodePort** : 30080 (port externe accessible sur tous les nœuds)
-- **Sélecteur** : `app: backend` (route vers les Pods backend)
-- **Load Balancing** : Distribue automatiquement les requêtes entre les 2 répliques
-
-**Accès** :
-- Depuis l'extérieur : `http://<NODE_IP>:30080`
-- Avec Minikube : `minikube service backend-service` (ouvre automatiquement le navigateur)
+- ✅ **Associations** : Créer un compte, gérer son profil
+- ✅ **Bénévoles** : S'inscrire, rejoindre des associations
+- ✅ **Événements** : Créer des événements avec créneaux horaires
+- ✅ **Disponibilités** : Indiquer sa disponibilité (Disponible/Peut-être/Pas disponible)
+- ✅ **Assignation automatique** : Algorithme qui assigne les bénévoles intelligemment
+- ✅ **Notifications** : Notifier les bénévoles de leurs assignations
+- ✅ **Annonces** : Système d'annonces pour communiquer
 
 ---
 
@@ -266,145 +151,507 @@ env:
 
 ### Logiciels Requis
 
-1. **Docker**
-   - Installation : [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)
+1. **Docker Desktop**
+   - Téléchargement : https://www.docker.com/products/docker-desktop
    - Vérification : `docker --version`
 
-2. **Kubernetes (un des suivants)** :
-   
-   **Option A : Minikube (Recommandé pour développement local)**
-   ```bash
-   # Windows (avec Chocolatey)
-   choco install minikube
-   
-   # Démarrer Minikube
-   minikube start
-   ```
-   
-   **Option B : Kind (Kubernetes in Docker)**
-   ```bash
-   # Windows (avec Chocolatey)
-   choco install kind
-   
-   # Créer un cluster
-   kind create cluster
-   ```
-   
-   **Option C : Cluster Cloud (GKE, EKS, AKS)**
-   - Configurer `kubectl` pour se connecter à votre cluster
+2. **Minikube**
+   - Installation Windows : `choco install minikube`
+   - Ou : https://minikube.sigs.k8s.io/docs/start/
+   - Vérification : `minikube version`
 
 3. **kubectl**
-   - Installation : [https://kubernetes.io/docs/tasks/tools/](https://kubernetes.io/docs/tasks/tools/)
+   - Installation : https://kubernetes.io/docs/tasks/tools/
+   - Ou : `choco install kubernetes-cli`
    - Vérification : `kubectl version --client`
-
-4. **Node.js** (pour développement local, optionnel)
-   - Installation : [https://nodejs.org/](https://nodejs.org/)
-   - Vérification : `node --version`
 
 ### Vérification de l'Environnement
 
-```bash
+```powershell
 # Vérifier Docker
 docker --version
 
-# Vérifier Kubernetes
+# Vérifier Minikube
+minikube version
+
+# Vérifier kubectl
 kubectl version --client
-
-# Vérifier la connexion au cluster
-kubectl cluster-info
-
-# Lister les nœuds
-kubectl get nodes
 ```
 
 ---
 
-## 🚀 Installation et Déploiement
+## 🚀 Guide d'Installation et de Déploiement
 
-### Étape 1 : Construire l'Image Docker du Backend
+**📝 Ce guide explique comment déployer l'application manuellement avec Kubernetes, sans utiliser de scripts**
 
-```bash
-# Aller dans le dossier backend
-cd backend
+---
 
-# Construire l'image Docker
+## 🆕 Installation Complète (Première Fois)
+
+**⏱️ Temps estimé : 15-20 minutes**
+
+### Étape 1 : Préparation de l'Environnement
+
+#### 1.1. Démarrer Docker Desktop
+- Ouvrez **Docker Desktop** sur votre machine
+- Attendez que Docker soit complètement démarré (icône Docker dans la barre des tâches)
+
+#### 1.2. Démarrer Minikube
+```powershell
+# Démarrer le cluster Kubernetes local
+minikube start
+
+# Vérifier que Minikube est bien démarré
+minikube status
+```
+
+**Résultat attendu** : Tous les composants doivent être en état "Running"
+
+#### 1.3. Configurer l'Environnement Docker pour Minikube
+```powershell
+# ⚠️ IMPORTANT : Cette commande configure Docker pour utiliser l'environnement Minikube
+# Cela permet de construire des images Docker accessibles par Minikube
+minikube docker-env | Invoke-Expression
+
+# Vérifier que Docker est bien configuré
+docker ps
+```
+
+**💡 Note** : Si vous ouvrez un nouveau terminal PowerShell, vous devrez réexécuter cette commande.
+
+---
+
+### Étape 2 : Construction de l'Image Docker
+
+#### 2.1. Naviguer vers la Racine du Projet
+```powershell
+# Remplacez le chemin par le chemin de votre projet
+cd D:\MyAsso
+# ou
+cd C:\Users\VotreNom\MyAsso
+```
+
+#### 2.2. Construire l'Image Docker
+```powershell
+# Construire l'image Docker du backend
+# Le Dockerfile à la racine du projet sera utilisé
 docker build -t myasso-backend:latest .
+
+# Vérifier que l'image a été créée
+docker images | Select-String "myasso-backend"
 ```
 
-**Résultat attendu** : Image Docker `myasso-backend:latest` créée localement.
+**Résultat attendu** : Vous devriez voir `myasso-backend` avec le tag `latest` dans la liste des images.
 
-### Étape 2 : Charger l'Image dans le Cluster
+**⏱️ Temps** : 2-5 minutes (selon votre connexion internet pour télécharger l'image Node.js de base)
 
-#### Pour Minikube :
-```bash
-# Charger l'image dans Minikube
-minikube image load myasso-backend:latest
+---
 
-# Vérifier que l'image est chargée
-minikube image ls | grep myasso-backend
+### Étape 3 : Configuration des Secrets
+
+#### 3.1. Modifier le Fichier de Secrets
+**⚠️ OBLIGATOIRE** : Avant de déployer, vous devez modifier les secrets pour la sécurité.
+
+1. Ouvrez le fichier `k8s/secret.yaml` avec un éditeur de texte (Notepad++, VS Code, etc.)
+
+2. Modifiez les valeurs suivantes :
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myasso-secrets
+  namespace: default
+type: Opaque
+stringData:
+  # ⚠️ CHANGEZ CES VALEURS !
+  mysql-root-password: VOTRE_MOT_DE_PASSE_ROOT_SECURISE
+  mysql-password: VOTRE_MOT_DE_PASSE_USER_SECURISE
+  jwt-secret: VOTRE_CLE_SECRETE_JWT_TRES_LONGUE_ET_SECURISEE
 ```
 
-#### Pour Kind :
-```bash
-# Charger l'image dans Kind
-kind load docker-image myasso-backend:latest
+**Exemple de valeurs sécurisées** :
+```yaml
+stringData:
+  mysql-root-password: RootPass123!@#
+  mysql-password: UserPass456!@#
+  jwt-secret: ma_cle_secrete_jwt_super_longue_pour_la_securite_2024_avec_des_caracteres_speciaux_!@#
 ```
 
-#### Pour un Registry Docker (Production) :
-```bash
-# Tagger l'image avec votre registry
-docker tag myasso-backend:latest <registry>/myasso-backend:latest
+3. **💾 Sauvegardez le fichier** après modification.
 
-# Pousser l'image
-docker push <registry>/myasso-backend:latest
+**💡 Note** : Ces secrets seront utilisés pour :
+- `mysql-root-password` : Mot de passe administrateur MySQL
+- `mysql-password` : Mot de passe de l'utilisateur MySQL de l'application
+- `jwt-secret` : Clé secrète pour signer les tokens JWT d'authentification
 
-# Modifier k8s/deployment-backend.yaml :
-# image: <registry>/myasso-backend:latest
-# imagePullPolicy: Always
+---
+
+### Étape 4 : Déploiement des Ressources Kubernetes
+
+**📋 Ordre de déploiement** : Les ressources doivent être déployées dans un ordre spécifique pour que les dépendances soient respectées.
+
+#### 4.1. Naviguer vers le Dossier Kubernetes
+```powershell
+cd k8s
 ```
 
-### Étape 3 : Personnaliser la Configuration
+#### 4.2. Déployer les Secrets
+```powershell
+# Créer les secrets (mots de passe MySQL, clé JWT)
+kubectl apply -f secret.yaml
 
-**⚠️ IMPORTANT** : Modifiez les secrets avant le déploiement en production !
+# Vérifier que les secrets ont été créés
+kubectl get secrets
+```
 
-Éditez `k8s/secret.yaml` :
+**Résultat attendu** : Vous devriez voir `myasso-secrets` dans la liste.
+
+#### 4.3. Déployer les ConfigMaps
+```powershell
+# Créer les ConfigMaps (configuration non sensible)
+kubectl apply -f configmap.yaml
+kubectl apply -f configmap-init-db.yaml
+
+# Vérifier que les ConfigMaps ont été créés
+kubectl get configmaps
+```
+
+**Résultat attendu** : Vous devriez voir `myasso-config` et `mysql-init-script` dans la liste.
+
+**💡 Explication** :
+- `configmap.yaml` : Contient la configuration de l'application (ports, noms de base de données, etc.)
+- `configmap-init-db.yaml` : Contient le script SQL d'initialisation qui crée toutes les tables
+
+#### 4.4. Créer le Volume Persistant (PVC)
+```powershell
+# Créer le PersistentVolumeClaim pour MySQL
+# Ce volume permet de conserver les données même si le Pod MySQL redémarre
+kubectl apply -f persistentvolumeclaim.yaml
+
+# Vérifier que le PVC a été créé et est lié (Bound)
+kubectl get pvc
+```
+
+**Résultat attendu** : Le statut doit être `Bound` (cela peut prendre quelques secondes).
+
+**💡 Explication** : Le PVC réserve 10Gi d'espace de stockage pour MySQL. Les données seront persistantes même après redémarrage.
+
+#### 4.5. Déployer MySQL
+```powershell
+# Déployer le Pod MySQL
+kubectl apply -f deployment-mysql.yaml
+
+# Créer le Service MySQL (communication interne)
+kubectl apply -f service-db.yaml
+
+# Vérifier que MySQL démarre
+kubectl get pods -l app=mysql
+```
+
+**Résultat attendu** : Le Pod MySQL devrait être en état `Running` après 30-60 secondes.
+
+**💡 Explication** :
+- `deployment-mysql.yaml` : Définit le Pod MySQL avec ses configurations (image, variables d'environnement, volumes)
+- `service-db.yaml` : Crée un service ClusterIP qui permet au backend de se connecter à MySQL via le nom `mysql-service`
+
+#### 4.6. Attendre que MySQL soit Prêt
+```powershell
+# Attendre que MySQL soit complètement démarré et prêt
+# Cette commande attend jusqu'à 2 minutes que le Pod soit en état "Ready"
+kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
+
+# Vérifier les logs de MySQL pour s'assurer qu'il a bien démarré
+kubectl logs -l app=mysql --tail=20
+```
+
+**Résultat attendu** : Vous devriez voir des messages indiquant que MySQL a démarré et que la base de données a été initialisée.
+
+**⏱️ Temps** : 30-60 secondes
+
+#### 4.7. Déployer le Backend
+```powershell
+# Déployer les Pods Backend (2 répliques pour la haute disponibilité)
+kubectl apply -f deployment-backend.yaml
+
+# Créer le Service Backend (exposition externe)
+kubectl apply -f service-backend.yaml
+
+# Vérifier que les Pods Backend démarrent
+kubectl get pods -l app=backend
+```
+
+**Résultat attendu** : Vous devriez voir 2 Pods backend qui passent progressivement à l'état `Running`.
+
+**💡 Explication** :
+- `deployment-backend.yaml` : Définit les Pods Node.js avec votre application (2 répliques)
+- `service-backend.yaml` : Crée un service NodePort qui expose l'application sur le port 30080
+
+**⏱️ Temps** : 30-60 secondes pour que les Pods démarrent complètement
+
+---
+
+### Étape 5 : Vérification du Déploiement
+
+#### 5.1. Vérifier l'État des Pods
+```powershell
+# Voir tous les Pods et leur état
+kubectl get pods
+
+# Résultat attendu :
+# NAME                                  READY   STATUS    RESTARTS   AGE
+# backend-deployment-xxxxx-xxxxx       1/1     Running   0          30s
+# backend-deployment-xxxxx-xxxxx       1/1     Running   0          30s
+# mysql-deployment-xxxxx-xxxxx         1/1     Running   0          2m
+```
+
+**✅ Tous les Pods doivent être en état `Running` et `READY 1/1`**
+
+#### 5.2. Vérifier les Services
+```powershell
+# Voir tous les Services
+kubectl get services
+
+# Résultat attendu :
+# NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+# backend-service   NodePort    10.96.xxx.xxx    <none>        3000:30080/TCP   30s
+# mysql-service     ClusterIP   10.96.xxx.xxx   <none>        3306/TCP         2m
+```
+
+**✅ Les deux services doivent être présents**
+
+#### 5.3. Vérifier les Logs (Optionnel)
+```powershell
+# Voir les logs du backend pour vérifier qu'il démarre correctement
+kubectl logs -l app=backend --tail=30
+
+# Voir les logs de MySQL
+kubectl logs -l app=mysql --tail=30
+```
+
+**✅ Vous devriez voir des messages indiquant que les services ont démarré correctement**
+
+---
+
+### Étape 6 : Accéder à l'Application
+
+#### 6.1. Méthode 1 : Via Minikube Service (Recommandé)
+```powershell
+# Cette commande ouvre automatiquement votre navigateur
+minikube service backend-service
+```
+
+**Résultat** : Votre navigateur s'ouvre automatiquement sur l'URL de l'application.
+
+#### 6.2. Méthode 2 : Via Port-Forward
+```powershell
+# Dans un terminal PowerShell, exécutez :
+kubectl port-forward service/backend-service 3000:3000
+
+# Puis ouvrez votre navigateur sur : http://localhost:3000
+```
+
+**💡 Note** : Gardez ce terminal ouvert pendant que vous utilisez l'application.
+
+#### 6.3. Méthode 3 : Via NodePort Directement
+```powershell
+# Obtenir l'IP de Minikube
+minikube ip
+
+# Puis accéder à : http://<IP_MINIKUBE>:30080
+# Exemple : http://192.168.49.2:30080
+```
+
+---
+
+## 🔄 Réactivation Rapide (Déjà Installé)
+
+**⏱️ Temps estimé : 2-3 minutes**
+
+Si vous avez déjà déployé l'application précédemment et que vous voulez simplement la relancer :
+
+### Option A : Minikube est Arrêté
+
+```powershell
+# 1. Démarrer Minikube
+minikube start
+
+# 2. Configurer l'environnement Docker
+minikube docker-env | Invoke-Expression
+
+# 3. Attendre que les Pods redémarrent automatiquement (30-60 secondes)
+# Kubernetes relance automatiquement les Pods selon les Deployments existants
+Start-Sleep -Seconds 30
+
+# 4. Vérifier que tout est prêt
+kubectl get pods
+
+# 5. Accéder à l'application
+minikube service backend-service
+```
+
+**💡 Explication** : Quand vous faites `minikube start`, Kubernetes lit automatiquement les ressources existantes (Deployments, Services, etc.) et relance les Pods selon ces définitions.
+
+### Option B : Minikube est Déjà Démarré
+
+```powershell
+# 1. Vérifier l'état de Minikube
+minikube status
+
+# 2. Vérifier que les Pods sont en cours d'exécution
+kubectl get pods
+
+# 3. Si tous les Pods sont "Running", accéder directement
+minikube service backend-service
+
+# 4. Si certains Pods ne sont pas prêts, attendre puis réessayer
+Start-Sleep -Seconds 30
+kubectl get pods
+minikube service backend-service
+```
+
+---
+
+### 🔍 VÉRIFICATIONS UTILES
+
+```powershell
+# Vérifier l'état de Minikube
+minikube status
+
+# Vérifier les Pods (doivent être tous "Running" et "1/1")
+kubectl get pods
+
+# Vérifier les Services
+kubectl get services
+
+# Vérifier le PVC (volume persistant)
+kubectl get pvc
+
+# Voir les logs du backend
+kubectl logs -l app=backend --tail=50
+
+# Voir les logs de MySQL
+kubectl logs -l app=mysql --tail=50
+```
+
+---
+
+### 🔧 EN CAS DE PROBLÈME
+
+```powershell
+# Si les Pods backend ne démarrent pas, reconstruire l'image
+cd D:\MyAsso
+minikube docker-env | Invoke-Expression
+docker build -t myasso-backend:latest .
+
+# Redémarrer les Pods backend
+kubectl delete pods -l app=backend
+
+# Attendre le redémarrage
+Start-Sleep -Seconds 30
+kubectl get pods
+```
+
+---
+
+## 📖 Guide Détaillé
+
+**📝 Si vous avez besoin de plus de détails, consultez les sections ci-dessous**
+
+---
+
+### 🆕 Première Installation (Première fois)
+
+**⏱️ Temps estimé : 10-15 minutes**
+
+Si c'est la première fois que vous lancez le projet, suivez toutes ces étapes :
+
+#### Étape 1 : Vérifier les Prérequis
+
+```powershell
+# Vérifier que Docker Desktop est installé et démarré
+docker --version
+
+# Vérifier que Minikube est installé
+minikube version
+
+# Vérifier que kubectl est installé
+kubectl version --client
+```
+
+#### Étape 2 : Démarrer Minikube
+
+```powershell
+# Démarrer Minikube (première fois, cela peut prendre 2-3 minutes)
+minikube start
+
+# Vérifier que Minikube est bien démarré
+minikube status
+```
+
+**Résultat attendu** : Tous les composants doivent être en "Running".
+
+#### Étape 3 : Activer l'Environnement Docker de Minikube
+
+**⚠️ IMPORTANT** : Cette étape est cruciale ! Elle permet de construire l'image Docker dans l'environnement de Minikube.
+
+```powershell
+# Activer l'environnement Docker de Minikube
+minikube docker-env | Invoke-Expression
+
+# Vérifier que Docker utilise maintenant Minikube
+docker ps
+```
+
+**💡 Note** : Si vous ouvrez un nouveau terminal PowerShell, vous devrez réexécuter cette commande.
+
+#### Étape 4 : Construire l'Image Docker
+
+```powershell
+# Aller à la racine du projet
+cd D:\MyAsso
+
+# Construire l'image Docker (cela peut prendre 2-3 minutes la première fois)
+docker build -t myasso-backend:latest .
+
+# Vérifier que l'image est créée
+docker images | Select-String "myasso-backend"
+```
+
+**Résultat attendu** : Vous devriez voir `myasso-backend` dans la liste des images Docker.
+
+#### Étape 5 : Modifier les Secrets (OBLIGATOIRE)
+
+**⚠️ NE SAUTEZ PAS CETTE ÉTAPE !**
+
+1. Ouvrez le fichier `k8s/secret.yaml` avec un éditeur de texte (Notepad++, VS Code, etc.)
+
+2. Modifiez les valeurs suivantes :
 
 ```yaml
 stringData:
-  mysql-root-password: VOTRE_MOT_DE_PASSE_ROOT_SECURISE
-  mysql-password: VOTRE_MOT_DE_PASSE_USER_SECURISE
-  jwt-secret: VOTRE_CLE_JWT_LONGUE_ET_ALEATOIRE
+  mysql-root-password: VOTRE_MOT_DE_PASSE_ROOT  # Changez-moi !
+  mysql-password: VOTRE_MOT_DE_PASSE_USER        # Changez-moi !
+  jwt-secret: VOTRE_CLE_SECRETE_JWT_LONGUE        # Changez-moi !
 ```
 
-Pour générer une clé JWT sécurisée :
-```bash
-# Linux/Mac
-openssl rand -base64 32
-
-# Windows (PowerShell)
--join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | % {[char]$_})
+**Exemple** :
+```yaml
+stringData:
+  mysql-root-password: MonMotDePasseRoot123
+  mysql-password: MonMotDePasseUser123
+  jwt-secret: ma_cle_secrete_jwt_super_longue_pour_la_securite_2024
 ```
 
-### Étape 4 : Déployer sur Kubernetes
+3. **💾 Sauvegardez le fichier** après modification.
 
-#### Option A : Script Automatique (Recommandé)
+#### Étape 6 : Déployer sur Kubernetes
 
-**Linux/Mac :**
-```bash
-cd k8s
-chmod +x deploy.sh
-./deploy.sh
-```
+Voir la section [Installation Complète](#-installation-complète-première-fois) pour les commandes de déploiement manuel détaillées.
 
-**Windows :**
-```bash
-cd k8s
-deploy.bat
-```
-
-#### Option B : Déploiement Manuel
-
-```bash
+En résumé, déployer dans cet ordre :
+```powershell
+# Aller dans le dossier k8s
 cd k8s
 
 # 1. Créer les Secrets
@@ -414,32 +661,36 @@ kubectl apply -f secret.yaml
 kubectl apply -f configmap.yaml
 kubectl apply -f configmap-init-db.yaml
 
-# 3. Créer le PersistentVolumeClaim
+# 3. Créer le PVC
 kubectl apply -f persistentvolumeclaim.yaml
 
 # 4. Déployer MySQL
 kubectl apply -f deployment-mysql.yaml
 kubectl apply -f service-db.yaml
 
-# 5. Attendre que MySQL soit prêt (30 secondes recommandées)
-sleep 30  # ou sur Windows: timeout /t 30
+# 5. Attendre que MySQL soit prêt
+kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
 
 # 6. Déployer le Backend
 kubectl apply -f deployment-backend.yaml
 kubectl apply -f service-backend.yaml
 ```
 
-#### Option C : Déploiement en Une Commande
+**⏱️ Temps estimé** : 2-3 minutes
 
-```bash
-cd k8s
-kubectl apply -f .
-```
+Le script va automatiquement :
+1. ✅ Créer les Secrets
+2. ✅ Créer les ConfigMaps
+3. ✅ Créer le volume persistant (PVC)
+4. ✅ Déployer MySQL
+5. ✅ Attendre que MySQL soit prêt
+6. ✅ Déployer le Backend
+7. ✅ Afficher le statut des Pods et Services
 
-### Étape 5 : Vérifier le Déploiement
+#### Étape 7 : Vérifier que Tout Fonctionne
 
-```bash
-# Vérifier les Pods
+```powershell
+# Vérifier les Pods (doivent être en état "Running")
 kubectl get pods
 
 # Résultat attendu :
@@ -447,459 +698,814 @@ kubectl get pods
 # backend-deployment-xxxxx-xxxxx       1/1     Running   0          30s
 # backend-deployment-xxxxx-xxxxx       1/1     Running   0          30s
 # mysql-deployment-xxxxx-xxxxx         1/1     Running   0          2m
+```
+
+#### Étape 8 : Accéder à l'Application
+
+```powershell
+# Minikube va ouvrir automatiquement le navigateur
+minikube service backend-service
+```
+
+**🎉 Félicitations ! Votre application est maintenant accessible !**
+
+---
+
+### 🔄 Réactivation Rapide (Déjà Installé)
+
+**⏱️ Temps estimé : 2-3 minutes**
+
+Si vous avez déjà installé le projet précédemment et que vous voulez simplement le relancer :
+
+#### Option A : Si Minikube est Arrêté
+
+```powershell
+# 1. Démarrer Minikube
+minikube start
+
+# 2. Activer l'environnement Docker
+minikube docker-env | Invoke-Expression
+
+# 3. Vérifier que les Pods redémarrent automatiquement
+kubectl get pods
+
+# Si les Pods ne sont pas prêts, attendez 30 secondes puis vérifiez à nouveau
+Start-Sleep -Seconds 30
+kubectl get pods
+
+# 4. Accéder à l'application
+minikube service backend-service
+```
+
+**💡 Les Pods redémarrent automatiquement** : Kubernetes redémarrera automatiquement les Pods qui étaient en cours d'exécution avant l'arrêt de Minikube.
+
+#### Option B : Si Minikube est Déjà Démarré
+
+```powershell
+# 1. Vérifier que Minikube est démarré
+minikube status
+
+# 2. Vérifier que les Pods sont en cours d'exécution
+kubectl get pods
+
+# Si tous les Pods sont en état "Running", vous pouvez directement accéder à l'application
+minikube service backend-service
+
+# Si certains Pods ne sont pas prêts, attendez quelques secondes
+Start-Sleep -Seconds 30
+kubectl get pods
+```
+
+#### Option C : Si les Pods ne Démarrent Pas
+
+```powershell
+# 1. Activer l'environnement Docker (au cas où)
+minikube docker-env | Invoke-Expression
+
+# 2. Vérifier que l'image existe toujours
+docker images | Select-String "myasso-backend"
+
+# 3. Si l'image n'existe pas, la reconstruire
+cd D:\MyAsso
+docker build -t myasso-backend:latest .
+
+# 4. Redémarrer les Pods backend
+kubectl delete pods -l app=backend
+
+# 5. Attendre que les Pods redémarrent (environ 30 secondes)
+Start-Sleep -Seconds 30
+kubectl get pods
+
+# 6. Accéder à l'application
+minikube service backend-service
+```
+
+---
+
+### 📋 Résumé Rapide - Commandes à Copier-Coller
+
+#### 🆕 Première Installation Complète
+
+```powershell
+# 1. Démarrer Minikube
+minikube start
+
+# 2. Activer l'environnement Docker (IMPORTANT !)
+minikube docker-env | Invoke-Expression
+
+# 3. Construire l'image Docker
+cd D:\MyAsso
+docker build -t myasso-backend:latest .
+
+# 4. ⚠️ Modifier k8s/secret.yaml (ouvrir avec un éditeur de texte)
+#    Changer les mots de passe : mysql-root-password, mysql-password, jwt-secret
+
+# 5. Déployer sur Kubernetes (voir section Installation Complète pour les détails)
+cd k8s
+kubectl apply -f secret.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f configmap-init-db.yaml
+kubectl apply -f persistentvolumeclaim.yaml
+kubectl apply -f deployment-mysql.yaml
+kubectl apply -f service-db.yaml
+kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
+kubectl apply -f deployment-backend.yaml
+kubectl apply -f service-backend.yaml
+
+# 6. Accéder à l'application
+minikube service backend-service
+```
+
+**⏱️ Temps estimé** : 10-15 minutes
+
+#### 🔄 Réactivation Rapide (Déjà Installé)
+
+**Si Minikube est arrêté :**
+
+```powershell
+# 1. Démarrer Minikube
+minikube start
+
+# 2. Activer l'environnement Docker
+minikube docker-env | Invoke-Expression
+
+# 3. Attendre que les Pods redémarrent (30 secondes)
+Start-Sleep -Seconds 30
+
+# 4. Vérifier que tout est prêt
+kubectl get pods
+
+# 5. Accéder à l'application
+minikube service backend-service
+```
+
+**Si Minikube est déjà démarré :**
+
+```powershell
+# 1. Vérifier que tout fonctionne
+kubectl get pods
+
+# 2. Si tous les Pods sont "Running", accéder directement
+minikube service backend-service
+
+# 3. Si certains Pods ne sont pas prêts, attendre 30 secondes puis réessayer
+Start-Sleep -Seconds 30
+kubectl get pods
+minikube service backend-service
+```
+
+**⏱️ Temps estimé** : 1-2 minutes
+
+---
+
+
+---
+
+## ⚡ Lancer l'Application Maintenant (Tout est Déjà Créé)
+
+**Vous avez déjà tout installé (PVC, build, déploiement) ? Voici comment lancer rapidement :**
+
+### 📋 Commande Rapide (Copier-Coller)
+
+```powershell
+# 1. Démarrer Minikube (si arrêté)
+minikube start
+
+# 2. Activer l'environnement Docker
+minikube docker-env | Invoke-Expression
+
+# 3. Attendre que les Pods redémarrent (30 secondes)
+Start-Sleep -Seconds 30
+
+# 4. Vérifier que tout est prêt
+kubectl get pods
+
+# 5. Accéder à l'application
+minikube service backend-service
+```
+
+**⏱️ Temps total : 1-2 minutes**
+
+### ✅ Vérifier que Tout Fonctionne
+
+```powershell
+# Vérifier les Pods (doivent être tous "Running" et "1/1")
+kubectl get pods
+
+# Vérifier le PVC (doit être "Bound")
+kubectl get pvc
 
 # Vérifier les Services
 kubectl get services
-
-# Résultat attendu :
-# NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-# backend-service   NodePort    10.96.xxx.xxx   <none>        3000:30080/TCP   30s
-# mysql-service     ClusterIP   10.96.xxx.xxx   <none>        3306/TCP         2m
-
-# Vérifier les PVC
-kubectl get pvc
-
-# Résultat attendu :
-# NAME        STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-# mysql-pvc   Bound    pvc-xxx  10Gi       RWO            standard       2m
 ```
 
 ---
 
-## ⚙️ Fonctionnement Détaillé
+## 📚 Documentation des Paramètres de Configuration
 
-### 1. Démarrage de MySQL
+Cette section explique tous les paramètres de configuration et comment les modifier pour adapter le déploiement à d'autres environnements.
 
-1. **Kubernetes crée le Pod MySQL** depuis le Deployment
-2. **Le PersistentVolumeClaim est lié** à un volume physique
-3. **MySQL démarre** avec les variables d'environnement (root password, database, user)
-4. **Le script SQL d'initialisation** (`configmap-init-db.yaml`) est exécuté automatiquement :
-   - Crée la base de données `myasso`
-   - Crée toutes les tables (associations, benevoles, evenements, etc.)
-5. **Les health checks** vérifient que MySQL est prêt
-6. **Le Pod passe à "Ready"** et peut accepter des connexions
+---
 
-**Temps estimé** : 30-60 secondes
+### 🔐 Secrets (`k8s/secret.yaml`)
 
-### 2. Démarrage du Backend
+**Fichier** : `k8s/secret.yaml`
 
-1. **L'init container démarre en premier** :
-   - Utilise `busybox` (image légère)
-   - Teste la connexion TCP à `mysql-service:3306` toutes les 2 secondes
-   - Attend que MySQL soit disponible
-2. **Une fois MySQL prêt**, l'init container se termine
-3. **Le container backend démarre** :
-   - Lit les variables d'environnement (DB_HOST, DB_PASSWORD, etc.)
-   - Se connecte à MySQL via `mysql-service:3306`
-   - Démarre le serveur Express sur le port 3000
-4. **Les health checks** vérifient que `/api/health` répond
-5. **Le Pod passe à "Ready"**
+Les secrets contiennent des informations sensibles (mots de passe, clés secrètes).
 
-**Temps estimé** : 10-20 secondes (après que MySQL soit prêt)
+#### Paramètres Configurables
 
-### 3. Communication Backend ↔ MySQL
+| Paramètre | Description | Exemple | Modification |
+|-----------|-------------|---------|--------------|
+| `mysql-root-password` | Mot de passe administrateur MySQL | `RootPass123!@#` | ⚠️ **OBLIGATOIRE** : Changez avant le déploiement |
+| `mysql-password` | Mot de passe utilisateur MySQL de l'application | `UserPass456!@#` | ⚠️ **OBLIGATOIRE** : Changez avant le déploiement |
+| `jwt-secret` | Clé secrète pour signer les tokens JWT | `ma_cle_secrete_longue` | ⚠️ **OBLIGATOIRE** : Changez avant le déploiement |
 
-1. **Le backend utilise `mysql-service` comme hostname** dans la variable `DB_HOST`
-2. **Kubernetes DNS** résout `mysql-service` en l'IP du Service ClusterIP
-3. **Le Service** route la connexion vers le Pod MySQL
-4. **MySQL** répond avec les données demandées
+#### Comment Modifier
 
-**Avantages** :
-- Pas besoin de connaître l'IP du Pod MySQL
-- Si le Pod MySQL est recréé, le Service continue de fonctionner
-- Load balancing automatique si plusieurs répliques MySQL (non configuré ici)
+1. Ouvrez `k8s/secret.yaml`
+2. Modifiez les valeurs dans `stringData`
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/secret.yaml`
+5. Redémarrez les Pods affectés : `kubectl rollout restart deployment/backend-deployment`
 
-### 4. Exposition Externe via NodePort
+**⚠️ Important** : Les secrets sont encodés en base64 dans Kubernetes. Utilisez `stringData` pour une modification facile.
 
-1. **L'utilisateur** accède à `http://<NODE_IP>:30080`
-2. **Le NodePort Service** écoute sur le port 30080 de tous les nœuds
-3. **Le Service** route la requête vers un Pod backend disponible (load balancing)
-4. **Le Pod backend** traite la requête et répond
-5. **La réponse** est renvoyée à l'utilisateur
+---
 
-**Exemple avec Minikube** :
-```bash
-# Obtenir l'URL d'accès
-minikube service backend-service --url
-# Résultat : http://192.168.49.2:30080
+### ⚙️ ConfigMap (`k8s/configmap.yaml`)
 
-# Ou ouvrir directement dans le navigateur
-minikube service backend-service
-```
+**Fichier** : `k8s/configmap.yaml`
 
-### 5. Persistance des Données
+Les ConfigMaps contiennent des configurations non sensibles.
 
-1. **Le PersistentVolumeClaim** demande 10Gi de stockage
-2. **Kubernetes** alloue un volume physique (sur le nœud ou via un provisioner)
-3. **Le volume est monté** dans le Pod MySQL à `/var/lib/mysql`
-4. **MySQL stocke toutes les données** dans ce volume
-5. **Si le Pod MySQL est supprimé** :
-   - Les données restent dans le volume
-   - Un nouveau Pod peut être créé avec les mêmes données
+#### Paramètres Configurables
 
-**Test de persistance** :
-```bash
-# Supprimer le Pod MySQL (Kubernetes le recréera automatiquement)
-kubectl delete pod -l app=mysql
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `mysql-database` | Nom de la base de données | `myasso` | Modifiable selon vos besoins |
+| `mysql-user` | Nom d'utilisateur MySQL | `myasso` | Modifiable selon vos besoins |
+| `mysql-port` | Port MySQL | `3306` | Standard MySQL, généralement pas besoin de changer |
+| `node-env` | Environnement Node.js | `production` | Peut être `development` ou `production` |
+| `port` | Port du serveur backend | `3000` | Modifiable si nécessaire |
+| `db-host` | Nom du service MySQL | `mysql-service` | ⚠️ Ne changez que si vous renommez le service |
+| `db-port` | Port de connexion MySQL | `3306` | Standard MySQL |
+| `db-name` | Nom de la base de données (doit correspondre à `mysql-database`) | `myasso` | Modifiable |
+| `db-user` | Utilisateur MySQL (doit correspondre à `mysql-user`) | `myasso` | Modifiable |
 
-# Attendre que le nouveau Pod démarre
-kubectl get pods -l app=mysql
+#### Comment Modifier
 
-# Vérifier que les données sont toujours là
-kubectl exec -it deployment/mysql-deployment -- mysql -u myasso -p -e "USE myasso; SHOW TABLES;"
+1. Ouvrez `k8s/configmap.yaml`
+2. Modifiez les valeurs dans `data`
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/configmap.yaml`
+5. Redémarrez les Pods : `kubectl rollout restart deployment/backend-deployment deployment/mysql-deployment`
+
+**💡 Note** : Si vous changez `mysql-database` ou `mysql-user`, assurez-vous que les valeurs correspondent dans toutes les sections.
+
+---
+
+### 🗄️ Script d'Initialisation de la Base de Données (`k8s/configmap-init-db.yaml`)
+
+**Fichier** : `k8s/configmap-init-db.yaml`
+
+Ce fichier contient le script SQL qui crée toutes les tables au démarrage de MySQL.
+
+#### Structure
+
+- **Fichier SQL** : `01-init.sql`
+- **Exécution** : Automatique au premier démarrage de MySQL
+- **Emplacement** : Monté dans `/docker-entrypoint-initdb.d/` du conteneur MySQL
+
+#### Modifications Possibles
+
+1. **Ajouter des tables** : Ajoutez vos `CREATE TABLE` dans le script
+2. **Ajouter des données initiales** : Ajoutez des `INSERT` après les `CREATE TABLE`
+3. **Modifier le schéma** : Modifiez les définitions de tables existantes
+
+#### Comment Modifier
+
+1. Ouvrez `k8s/configmap-init-db.yaml`
+2. Modifiez le contenu dans `data.01-init.sql`
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/configmap-init-db.yaml`
+5. **⚠️ Important** : Pour que les modifications prennent effet, vous devez supprimer le PVC et le recréer :
+   ```powershell
+   # Supprimer le PVC (⚠️ cela supprime toutes les données)
+   kubectl delete pvc mysql-pvc
+   
+   # Supprimer le Pod MySQL
+   kubectl delete deployment mysql-deployment
+   
+   # Recréer le PVC
+   kubectl apply -f k8s/persistentvolumeclaim.yaml
+   
+   # Redéployer MySQL (le script sera réexécuté)
+   kubectl apply -f k8s/deployment-mysql.yaml
+   ```
+
+---
+
+### 💾 PersistentVolumeClaim (`k8s/persistentvolumeclaim.yaml`)
+
+**Fichier** : `k8s/persistentvolumeclaim.yaml`
+
+Définit le volume de stockage persistant pour MySQL.
+
+#### Paramètres Configurables
+
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `storage` | Taille du volume | `10Gi` | Modifiable selon vos besoins (ex: `20Gi`, `50Gi`) |
+| `accessModes` | Mode d'accès | `ReadWriteOnce` | Standard pour MySQL, généralement pas besoin de changer |
+
+#### Comment Modifier
+
+1. Ouvrez `k8s/persistentvolumeclaim.yaml`
+2. Modifiez la valeur de `storage` dans `resources.requests.storage`
+3. Sauvegardez le fichier
+4. **⚠️ Important** : Pour augmenter la taille, vous devez supprimer et recréer le PVC (cela supprime les données) :
+   ```powershell
+   # Sauvegarder les données d'abord (optionnel)
+   kubectl exec deployment/mysql-deployment -- mysqldump -uroot -p myasso > backup.sql
+   
+   # Supprimer le PVC
+   kubectl delete pvc mysql-pvc
+   
+   # Appliquer le nouveau PVC
+   kubectl apply -f k8s/persistentvolumeclaim.yaml
+   
+   # Redéployer MySQL
+   kubectl apply -f k8s/deployment-mysql.yaml
+   ```
+
+---
+
+### 🐬 Déploiement MySQL (`k8s/deployment-mysql.yaml`)
+
+**Fichier** : `k8s/deployment-mysql.yaml`
+
+Définit le Pod MySQL.
+
+#### Paramètres Configurables
+
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `replicas` | Nombre de répliques MySQL | `1` | ⚠️ MySQL ne supporte généralement qu'une seule instance |
+| `image` | Image Docker MySQL | `mysql:8.0` | Peut être changé pour une autre version (ex: `mysql:8.1`) |
+| `resources.requests.memory` | Mémoire minimale | `512Mi` | Modifiable selon vos ressources |
+| `resources.requests.cpu` | CPU minimal | `250m` | Modifiable selon vos ressources |
+| `resources.limits.memory` | Mémoire maximale | `1Gi` | Modifiable selon vos ressources |
+| `resources.limits.cpu` | CPU maximal | `500m` | Modifiable selon vos ressources |
+
+#### Comment Modifier
+
+1. Ouvrez `k8s/deployment-mysql.yaml`
+2. Modifiez les valeurs souhaitées
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/deployment-mysql.yaml`
+5. Kubernetes redéploiera automatiquement le Pod avec les nouvelles configurations
+
+---
+
+### 🚀 Déploiement Backend (`k8s/deployment-backend.yaml`)
+
+**Fichier** : `k8s/deployment-backend.yaml`
+
+Définit les Pods Node.js de l'application.
+
+#### Paramètres Configurables
+
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `replicas` | Nombre de répliques backend | `2` | Modifiable (1 pour développement, 3+ pour production) |
+| `image` | Image Docker backend | `myasso-backend:latest` | ⚠️ Ne changez que si vous utilisez un registry |
+| `imagePullPolicy` | Politique de pull d'image | `IfNotPresent` | ⚠️ Gardez `IfNotPresent` pour les images locales |
+| `resources.requests.memory` | Mémoire minimale | `256Mi` | Modifiable selon vos ressources |
+| `resources.requests.cpu` | CPU minimal | `100m` | Modifiable selon vos ressources |
+| `resources.limits.memory` | Mémoire maximale | `512Mi` | Modifiable selon vos ressources |
+| `resources.limits.cpu` | CPU maximal | `500m` | Modifiable selon vos ressources |
+
+#### Comment Modifier
+
+1. Ouvrez `k8s/deployment-backend.yaml`
+2. Modifiez les valeurs souhaitées
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/deployment-backend.yaml`
+5. Kubernetes redéploiera automatiquement les Pods avec les nouvelles configurations
+
+**💡 Exemple** : Pour le développement, vous pouvez réduire à 1 réplique :
+```yaml
+spec:
+  replicas: 1  # Au lieu de 2
 ```
 
 ---
 
-## 📖 Guide d'Utilisation
+### 🌐 Service Backend (`k8s/service-backend.yaml`)
 
-### Accéder à l'Application
+**Fichier** : `k8s/service-backend.yaml`
 
-#### Méthode 1 : Via Port-Forward (Recommandé pour tests locaux)
+Expose l'application backend à l'extérieur du cluster.
 
-```bash
-# Créer un tunnel local
-kubectl port-forward service/backend-service 3000:3000
+#### Paramètres Configurables
 
-# Accéder à l'application
-# http://localhost:3000
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `type` | Type de service | `NodePort` | Peut être `ClusterIP` (interne) ou `LoadBalancer` (cloud) |
+| `port` | Port du service | `3000` | Modifiable si vous changez le port du backend |
+| `targetPort` | Port du conteneur | `3000` | Doit correspondre au port du backend |
+| `nodePort` | Port externe | `30080` | Modifiable (doit être entre 30000-32767) |
+
+#### Comment Modifier
+
+1. Ouvrez `k8s/service-backend.yaml`
+2. Modifiez les valeurs souhaitées
+3. Sauvegardez le fichier
+4. Appliquez les modifications : `kubectl apply -f k8s/service-backend.yaml`
+
+**💡 Exemple** : Pour changer le port externe à 30081 :
+```yaml
+ports:
+- port: 3000
+  targetPort: 3000
+  nodePort: 30081  # Au lieu de 30080
 ```
 
-#### Méthode 2 : Via NodePort (Accès externe)
+---
 
-**Avec Minikube :**
-```bash
-# Obtenir l'URL
-minikube service backend-service --url
+### 🔗 Service MySQL (`k8s/service-db.yaml`)
 
-# Ou ouvrir directement
+**Fichier** : `k8s/service-db.yaml`
+
+Service interne pour la communication avec MySQL.
+
+#### Paramètres Configurables
+
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `type` | Type de service | `ClusterIP` | ⚠️ Ne changez généralement pas (service interne) |
+| `port` | Port du service | `3306` | Standard MySQL, généralement pas besoin de changer |
+| `targetPort` | Port du conteneur | `3306` | Standard MySQL |
+
+**💡 Note** : Ce service est interne au cluster. Ne le changez que si vous avez une raison spécifique.
+
+---
+
+### 🐳 Dockerfile
+
+**Fichier** : `Dockerfile` (à la racine du projet)
+
+Définit l'image Docker du backend.
+
+#### Paramètres Configurables
+
+| Paramètre | Description | Valeur par Défaut | Modification |
+|-----------|-------------|-------------------|--------------|
+| `FROM node:18` | Image de base Node.js | `node:18` | Peut être changé pour une autre version (ex: `node:20`) |
+| `EXPOSE 3000` | Port exposé | `3000` | Modifiez si vous changez le port du backend |
+| `WORKDIR /app` | Répertoire de travail | `/app` | Généralement pas besoin de changer |
+
+#### Comment Modifier
+
+1. Ouvrez le `Dockerfile`
+2. Modifiez les valeurs souhaitées
+3. Sauvegardez le fichier
+4. Reconstruisez l'image : `docker build -t myasso-backend:latest .`
+5. Redéployez : `kubectl rollout restart deployment/backend-deployment`
+
+---
+
+### 🔄 Adaptation à d'Autres Environnements
+
+#### Environnement de Développement
+
+**Modifications recommandées** :
+
+1. **Réduire les répliques** :
+   ```yaml
+   # deployment-backend.yaml
+   replicas: 1  # Au lieu de 2
+   ```
+
+2. **Réduire les ressources** :
+   ```yaml
+   # deployment-backend.yaml et deployment-mysql.yaml
+   resources:
+     requests:
+       memory: "128Mi"  # Au lieu de 256Mi
+       cpu: "50m"       # Au lieu de 100m
+   ```
+
+3. **Changer l'environnement Node.js** :
+   ```yaml
+   # configmap.yaml
+   node-env: development
+   ```
+
+#### Environnement de Production
+
+**Modifications recommandées** :
+
+1. **Augmenter les répliques** :
+   ```yaml
+   # deployment-backend.yaml
+   replicas: 3  # Au lieu de 2
+   ```
+
+2. **Augmenter les ressources** :
+   ```yaml
+   resources:
+     requests:
+       memory: "512Mi"
+       cpu: "250m"
+     limits:
+       memory: "1Gi"
+       cpu: "1000m"
+   ```
+
+3. **Utiliser un registry Docker** :
+   - Construire et pousser l'image vers Docker Hub ou un registry privé
+   - Modifier `deployment-backend.yaml` :
+     ```yaml
+     image: votre-registry/myasso-backend:latest
+     imagePullPolicy: Always
+     ```
+
+4. **Sécuriser les secrets** :
+   - Utiliser un gestionnaire de secrets (ex: HashiCorp Vault)
+   - Ne jamais commiter les secrets dans Git
+
+---
+
+## 💾 Persistance des Données (Important !)
+
+### ✅ Oui, vos données sont conservées grâce au PVC !
+
+Le **PersistentVolumeClaim (PVC)** garantit que **toutes vos données sont sauvegardées**, même si vous :
+
+- ✅ Redémarrez Minikube (`minikube stop` puis `minikube start`)
+- ✅ Supprimez les Pods (`kubectl delete pods ...`)
+- ✅ Redéployez l'application
+
+### 🧪 Test de Persistance
+
+**Scénario : Ajouter des utilisateurs puis relancer**
+
+#### 1. Ajouter des Données
+
+```powershell
+# 1. Lancer l'application
+minikube service backend-service
+
+# 2. Dans l'application :
+#    - Créez un compte association
+#    - Créez un compte bénévole
+#    - Créez des événements
+#    - Ajoutez des données de test
+```
+
+#### 2. Arrêter et Relancer
+
+```powershell
+# Arrêter Minikube
+minikube stop
+
+# Redémarrer Minikube
+minikube start
+minikube docker-env | Invoke-Expression
+Start-Sleep -Seconds 30
+kubectl get pods
 minikube service backend-service
 ```
 
-**Avec un cluster cloud :**
-```bash
-# Obtenir l'IP d'un nœud
-kubectl get nodes -o wide
+#### 3. Vérifier que les Données Sont Toujours Là
 
-# Accéder via
-# http://<NODE_IP>:30080
-```
+**✅ Tous vos utilisateurs, événements et données doivent être présents !**
 
-### Tester l'API
+### 🔍 Vérifier la Persistance dans MySQL
 
-```bash
-# Test de santé (via port-forward)
-curl http://localhost:3000/api/health
+```powershell
+# Se connecter au Pod MySQL
+kubectl exec -it deployment/mysql-deployment -- mysql -uroot -p
 
-# Résultat attendu :
-# {"status":"OK","message":"API is running"}
-
-# Test d'inscription association
-curl -X POST http://localhost:3000/api/auth/register/association \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nom": "Test Association",
-    "email": "test@example.com",
-    "password": "password123",
-    "description": "Description de test"
-  }'
-```
-
-### Voir les Logs
-
-```bash
-# Logs du backend
-kubectl logs -f deployment/backend-deployment
-
-# Logs d'un Pod spécifique
-kubectl logs -f <pod-name>
-
-# Logs de MySQL
-kubectl logs -f deployment/mysql-deployment
-```
-
-### Accéder à la Base de Données
-
-```bash
-# Se connecter à MySQL
-kubectl exec -it deployment/mysql-deployment -- mysql -u myasso -p
-
-# Entrer le mot de passe (depuis le secret)
-# Une fois connecté :
+# Entrer le mot de passe root (depuis k8s/secret.yaml)
+# Puis dans MySQL :
 USE myasso;
 SHOW TABLES;
-SELECT * FROM associations;
+SELECT COUNT(*) FROM associations;  -- Nombre d'associations
+SELECT COUNT(*) FROM benevoles;      -- Nombre de bénévoles
+SELECT * FROM associations;          -- Liste des associations
+EXIT;
 ```
 
-### Redimensionner les Déploiements
+**✅ Si vous voyez vos données = Persistance fonctionne !**
 
-```bash
-# Augmenter le nombre de répliques du backend
-kubectl scale deployment backend-deployment --replicas=3
+### ⚠️ Important : Quand les Données Sont Perdues
 
-# Vérifier
-kubectl get pods -l app=backend
-```
+**❌ Les données sont perdues uniquement si :**
 
-### Mettre à Jour l'Image Docker
+- Vous supprimez le PVC : `kubectl delete pvc mysql-pvc`
+- Vous supprimez Minikube : `minikube delete`
+- Vous supprimez manuellement le volume Docker
 
-```bash
-# 1. Reconstruire l'image
-cd backend
-docker build -t myasso-backend:latest .
+**✅ Les données SONT conservées si :**
 
-# 2. Recharger dans le cluster (Minikube)
-minikube image load myasso-backend:latest
-
-# 3. Redémarrer les Pods pour utiliser la nouvelle image
-kubectl rollout restart deployment/backend-deployment
-
-# Vérifier le statut
-kubectl rollout status deployment/backend-deployment
-```
+- Vous redémarrez Minikube
+- Vous supprimez et recréez les Pods
+- Vous redéployez l'application
+- Vous modifiez les ConfigMaps/Secrets
 
 ---
 
 ## 🔍 Dépannage
 
-### Problème : Les Pods ne démarrent pas
+### Vérifier les Logs
 
-**Symptômes** :
-```bash
-kubectl get pods
-# STATUS: Pending ou CrashLoopBackOff
+```powershell
+# Logs MySQL
+kubectl logs -f deployment/mysql-deployment
+
+# Logs Backend
+kubectl logs -f deployment/backend-deployment
+
+# Logs d'un Pod spécifique
+kubectl logs <nom-du-pod>
 ```
 
-**Solutions** :
+### Problème : Image Docker non trouvée
 
-1. **Vérifier les événements** :
-```bash
-kubectl get events --sort-by='.lastTimestamp'
-kubectl describe pod <pod-name>
+**Symptômes** : Pods en état "ImagePullBackOff"
+
+**Solution** :
+```powershell
+# Réactiver l'environnement Docker de Minikube
+minikube docker-env | Invoke-Expression
+
+# Reconstruire l'image
+docker build -t myasso-backend:latest .
+
+# Vérifier que l'imagePullPolicy est "IfNotPresent" dans deployment-backend.yaml
 ```
 
-2. **Vérifier les logs** :
-```bash
-kubectl logs <pod-name>
-kubectl logs <pod-name> --previous  # Si le Pod a redémarré
-```
+### Problème : MySQL ne démarre pas
 
-3. **Problèmes courants** :
-   - **Image non trouvée** : Vérifier que l'image est chargée dans le cluster
-   - **PVC non lié** : Vérifier `kubectl get pvc`
-   - **Secrets manquants** : Vérifier `kubectl get secrets`
-
-### Problème : Le backend ne peut pas se connecter à MySQL
-
-**Symptômes** :
-```bash
-kubectl logs deployment/backend-deployment
-# Erreur: ECONNREFUSED ou Timeout
-```
-
-**Solutions** :
-
-1. **Vérifier que MySQL est prêt** :
-```bash
-kubectl get pods -l app=mysql
+**Solution** :
+```powershell
+# Vérifier les logs
 kubectl logs deployment/mysql-deployment
-```
 
-2. **Tester la connexion depuis le backend** :
-```bash
-kubectl exec -it deployment/backend-deployment -- sh
-# Dans le shell :
-nc -zv mysql-service 3306
-```
+# Vérifier les événements
+kubectl describe pod -l app=mysql
 
-3. **Vérifier les variables d'environnement** :
-```bash
-kubectl describe pod -l app=backend | grep -A 20 "Environment"
-```
-
-4. **Vérifier les secrets** :
-```bash
-kubectl get secret myasso-secrets -o yaml
-```
-
-### Problème : Le NodePort n'est pas accessible
-
-**Symptômes** : Impossible d'accéder à `http://<NODE_IP>:30080`
-
-**Solutions** :
-
-1. **Vérifier que le Service existe** :
-```bash
-kubectl get service backend-service
-```
-
-2. **Vérifier que les Pods backend sont Ready** :
-```bash
-kubectl get pods -l app=backend
-```
-
-3. **Tester avec port-forward d'abord** :
-```bash
-kubectl port-forward service/backend-service 3000:3000
-# Puis tester http://localhost:3000
-```
-
-4. **Avec Minikube** : Utiliser `minikube service backend-service` au lieu de l'IP directement
-
-### Problème : Les données sont perdues après redémarrage
-
-**Cause** : Le PVC n'est pas correctement configuré ou lié.
-
-**Solutions** :
-
-1. **Vérifier le PVC** :
-```bash
-kubectl get pvc mysql-pvc
+# Vérifier le PVC
+kubectl get pvc
 kubectl describe pvc mysql-pvc
 ```
 
-2. **Vérifier que le volume est monté** :
-```bash
-kubectl describe pod -l app=mysql | grep -A 10 "Volumes"
-```
+### Problème : Backend ne peut pas se connecter à MySQL
 
-3. **Vérifier les StorageClasses disponibles** :
-```bash
-kubectl get storageclass
-```
-
-### Problème : L'image Docker n'est pas trouvée
-
-**Symptômes** :
-```bash
-kubectl get pods
-# STATUS: ImagePullBackOff ou ErrImagePull
-```
-
-**Solutions** :
-
-1. **Avec Minikube** : Charger l'image
-```bash
-minikube image load myasso-backend:latest
-```
-
-2. **Vérifier l'imagePullPolicy** dans `deployment-backend.yaml` :
-```yaml
-imagePullPolicy: IfNotPresent  # Pour images locales
-# ou
-imagePullPolicy: Always        # Pour registry Docker
-```
-
-3. **Avec un registry** : Vérifier les credentials et l'URL
-
----
-
-## ✅ Tests et Validation
-
-### Test 1 : Vérification des Pods
-
-```bash
-kubectl get pods
-# Vérifier que tous les Pods sont "Running" et "Ready"
-```
-
-### Test 2 : Vérification des Services
-
-```bash
-kubectl get services
-# Vérifier que les services existent et ont des CLUSTER-IP
-```
-
-### Test 3 : Test de Santé de l'API
-
-```bash
-# Via port-forward
-kubectl port-forward service/backend-service 3000:3000
-curl http://localhost:3000/api/health
-
-# Réponse attendue :
-# {"status":"OK","message":"API is running"}
-```
-
-### Test 4 : Test de Connexion à MySQL
-
-```bash
-# Se connecter à MySQL
-kubectl exec -it deployment/mysql-deployment -- mysql -u myasso -p
-
-# Entrer le mot de passe, puis :
-USE myasso;
-SHOW TABLES;
-# Doit afficher toutes les tables créées
-```
-
-### Test 5 : Test de Persistance
-
-```bash
-# 1. Créer des données de test
-kubectl exec -it deployment/mysql-deployment -- mysql -u myasso -p -e "USE myasso; INSERT INTO associations (nom, email, password) VALUES ('Test', 'test@test.com', 'hash');"
-
-# 2. Supprimer le Pod MySQL
-kubectl delete pod -l app=mysql
-
-# 3. Attendre que le nouveau Pod démarre (30 secondes)
+**Solution** :
+```powershell
+# Vérifier que MySQL est Running
 kubectl get pods -l app=mysql
 
-# 4. Vérifier que les données sont toujours là
-kubectl exec -it deployment/mysql-deployment -- mysql -u myasso -p -e "USE myasso; SELECT * FROM associations;"
-# Doit afficher les données créées
+# Vérifier que le service MySQL existe
+kubectl get service mysql-service
+
+# Tester depuis un Pod backend
+kubectl exec -it deployment/backend-deployment -- sh
+# Dans le shell : ping mysql-service
 ```
 
-### Test 6 : Test de Résilience
+### Nettoyer et Redéployer
 
-```bash
-# Supprimer un Pod backend (Kubernetes le recréera automatiquement)
-kubectl delete pod -l app=backend
+```powershell
+# Supprimer tous les déploiements
+cd k8s
+kubectl delete -f .
 
-# Vérifier qu'un nouveau Pod démarre
-kubectl get pods -l app=backend
+# Attendre quelques secondes
+Start-Sleep -Seconds 5
 
-# Vérifier que l'application fonctionne toujours
-curl http://localhost:3000/api/health
+# Redéployer
+kubectl apply -f .
 ```
 
-### Test 7 : Test de Load Balancing
+### Reconstruire l'Image et Redéployer
 
-```bash
-# Faire plusieurs requêtes (les Pods backend tournent)
-for i in {1..10}; do
-  curl http://localhost:3000/api/health
-  echo ""
-done
+```powershell
+# 1. Activer l'environnement Docker de Minikube
+minikube docker-env | Invoke-Expression
 
-# Vérifier les logs de chaque Pod pour voir la distribution
-kubectl logs deployment/backend-deployment --all-containers=true
+# 2. Reconstruire l'image
+cd D:\MyAsso
+docker build -t myasso-backend:latest .
+
+# 3. Supprimer les Pods backend pour forcer le redémarrage
+kubectl delete pods -l app=backend
+
+# Les Pods seront recréés automatiquement avec la nouvelle image
+```
+
+### Arrêter/Démarrer Minikube
+
+```powershell
+# Arrêter Minikube
+minikube stop
+
+# Démarrer Minikube
+minikube start
+
+# Supprimer le cluster (⚠️ supprime toutes les données)
+minikube delete
 ```
 
 ---
 
-## 📚 Ressources Supplémentaires
+## 📊 Commandes Utiles
 
-- **Documentation Kubernetes** : [https://kubernetes.io/docs/](https://kubernetes.io/docs/)
-- **Documentation Docker** : [https://docs.docker.com/](https://docs.docker.com/)
-- **Documentation MySQL** : [https://dev.mysql.com/doc/](https://dev.mysql.com/doc/)
-- **Documentation Node.js** : [https://nodejs.org/docs/](https://nodejs.org/docs/)
+```powershell
+# Voir tous les Pods
+kubectl get pods
+
+# Voir tous les Services
+kubectl get services
+
+# Voir les événements récents
+kubectl get events --sort-by='.lastTimestamp'
+
+# Détails d'un Pod
+kubectl describe pod <nom-du-pod>
+
+# Entrer dans un Pod
+kubectl exec -it <nom-du-pod> -- sh
+
+# Voir les logs en temps réel
+kubectl logs -f deployment/backend-deployment
+
+# Redémarrer un Deployment
+kubectl rollout restart deployment/backend-deployment
+```
 
 ---
 
-## 🎯 Conclusion
+## ✅ Démarrage Express - Checklist
 
-Ce projet démontre comment déployer une application web complète sur Kubernetes avec :
-- ✅ Déploiement de base de données avec persistance
-- ✅ Déploiement d'application web avec haute disponibilité
-- ✅ Communication interne sécurisée via Services
-- ✅ Exposition externe via NodePort
-- ✅ Gestion de configuration via Secrets et ConfigMaps
-- ✅ Health checks et redémarrage automatique
-- ✅ Persistance des données
+**🎯 Suivez ces étapes dans l'ordre pour lancer le projet sur votre machine :**
 
-Le système est **production-ready** avec quelques ajustements de sécurité (secrets réels, ingress controller, etc.).
+- [ ] **1. Démarrer Minikube**
+  ```powershell
+  minikube start
+  minikube docker-env | Invoke-Expression
+  ```
+
+- [ ] **2. Construire l'image Docker**
+  ```powershell
+  cd D:\MyAsso
+  docker build -t myasso-backend:latest .
+  ```
+
+- [ ] **3. Modifier les secrets** (⚠️ OBLIGATOIRE)
+  - Ouvrir `k8s/secret.yaml`
+  - Changer `mysql-root-password`, `mysql-password`, et `jwt-secret`
+  - Sauvegarder
+
+- [ ] **4. Déployer sur Kubernetes**
+  ```powershell
+  cd k8s
+  kubectl apply -f secret.yaml
+  kubectl apply -f configmap.yaml
+  kubectl apply -f configmap-init-db.yaml
+  kubectl apply -f persistentvolumeclaim.yaml
+  kubectl apply -f deployment-mysql.yaml
+  kubectl apply -f service-db.yaml
+  kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
+  kubectl apply -f deployment-backend.yaml
+  kubectl apply -f service-backend.yaml
+  ```
+
+- [ ] **5. Vérifier les Pods**
+  ```powershell
+  kubectl get pods
+  ```
+  (Tous doivent être en état "Running")
+
+- [ ] **6. Accéder à l'application**
+  ```powershell
+  minikube service backend-service
+  ```
+
+**⏱️ Temps estimé** : 5-10 minutes (première fois)
 
 ---
 
-**Projet réalisé pour le TP Kubernetes - Déploiement d'Application Web avec Base de Données**
+## 📚 Ressources
+
+- [Documentation Kubernetes](https://kubernetes.io/docs/)
+- [Documentation Minikube](https://minikube.sigs.k8s.io/docs/)
+- [Documentation Docker](https://docs.docker.com/)
+
+---
+
+**✅ Votre application MyAsso est maintenant déployée sur Kubernetes !**

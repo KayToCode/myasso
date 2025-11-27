@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails événement - MyAsso</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MyAsso</h1>
+            <nav>
+                <a href="index.html">🏠 Accueil</a>
+                <div id="authLinks">
+                    <a href="login.html">🔐 Connexion</a>
+                    <a href="register.html">📝 Inscription</a>
+                </div>
+                <div id="userLinks" style="display: none;">
+                    <a href="#" id="dashboardLink">📊 Tableau de bord</a>
+                    <a href="#" id="profileLink">👤 Profil</a>
+                    <a href="#" id="logoutBtn">🚪 Déconnexion</a>
+                </div>
+                <a href="#" id="backBtn">⬅️ Retour</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="eventDetails"></div>
+    </main>
+
+    <script src="js/toast.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/evenement-detail.js"></script>
+    <script>
+        // Initialiser auth pour cette page aussi
+        document.addEventListener('DOMContentLoaded', () => {
+            Auth.updateAuthUI();
+        });
+    </script>
+</body>
+</html>
+

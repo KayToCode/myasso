@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails Association - MyAsso</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MyAsso <span class="emoji">🌟</span></h1>
+            <nav>
+                <a href="index.html">🏠 Accueil</a>
+                <a href="associations.html">🏛️ Associations</a>
+                <div id="authLinks">
+                    <a href="login.html">🔐 Connexion</a>
+                    <a href="register.html">📝 Inscription</a>
+                </div>
+                <div id="userLinks" style="display: none;">
+                    <a href="#" id="dashboardLink">📊 Tableau de bord</a>
+                    <a href="#" id="profileLink">👤 Profil</a>
+                    <a href="#" id="logoutBtn">🚪 Déconnexion</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: var(--text-light);">Chargement en cours... <span class="emoji">⏳</span></p>
+        </div>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div id="associationDetails"></div>
+        
+        <div class="tabs" style="margin-top: 2rem;">
+            <button class="tab active" onclick="switchTab('evenements')">📅 Événements</button>
+            <button class="tab" onclick="switchTab('annonces')">📢 Annonces</button>
+        </div>
+
+        <div id="tabEvenements" class="tab-content active">
+            <h3>Événements de l'association</h3>
+            <div id="evenementsList"></div>
+        </div>
+
+        <div id="tabAnnonces" class="tab-content">
+            <h3>Annonces de l'association</h3>
+            <div id="annoncesList"></div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>✨ &copy; 2025 MyAsso - Tous droits réservés ✨</p>
+            <p style="margin-top: 0.5rem; opacity: 0.8;">Fait avec ❤️ pour les associations et leurs bénévoles par les bin cyber 3</p>
+        </div>
+    </footer>
+
+    <script src="js/toast.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/association-detail.js"></script>
+</body>
+</html>
+

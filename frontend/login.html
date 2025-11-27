@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - MyAsso</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MyAsso</h1>
+            <nav>
+                <a href="index.html">Accueil</a>
+                <a href="register.html">Inscription</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="form-container">
+            <h2 style="text-align: center; font-size: 2rem; margin-bottom: 2rem; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                🔐 Connexion
+            </h2>
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('benevole')">👥 Je suis bénévole</button>
+                <button class="tab" onclick="switchTab('association')">🏢 Je suis une association</button>
+            </div>
+
+            <!-- Formulaire Bénévole -->
+            <div id="formBenevole" class="tab-content active">
+                <form id="loginBenevoleForm">
+                    <div class="form-group">
+                        <label for="benevole_email">📧 Email</label>
+                        <input type="email" id="benevole_email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="benevole_password">🔒 Mot de passe</label>
+                        <input type="password" id="benevole_password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <span>🚀</span> Se connecter
+                    </button>
+                </form>
+            </div>
+
+            <!-- Formulaire Association -->
+            <div id="formAssociation" class="tab-content">
+                <form id="loginAssociationForm">
+                    <div class="form-group">
+                        <label for="asso_email">📧 Email</label>
+                        <input type="email" id="asso_email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="asso_password">🔒 Mot de passe</label>
+                        <input type="password" id="asso_password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <span>🚀</span> Se connecter
+                    </button>
+                </form>
+            </div>
+
+            <p style="text-align: center; margin-top: 2rem; color: var(--text-light);">
+                Pas encore de compte ? <a href="register.html" style="color: var(--accent-color); font-weight: 600; text-decoration: none;">📝 Inscrivez-vous</a>
+            </p>
+        </div>
+    </main>
+
+    <script src="js/toast.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>
+
