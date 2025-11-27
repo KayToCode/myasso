@@ -141,21 +141,37 @@ async function loadTaches(evenementId, taches, isBenevole, isAssociation) {
 
 function renderAvailabilityButtons(id, disponibilite, type) {
     const statut = disponibilite ? disponibilite.statut : null;
+    const isEnAttente = statut === 'en_attente_approbation';
+    const isApprouve = statut === 'approuve';
+    const isRefuse = statut === 'refuse';
+    
+    let statusMessage = '';
+    if (isEnAttente) {
+        statusMessage = '<p style="color: #007bff; font-weight: 600; margin-top: 0.5rem;">⏳ En attente d\'approbation</p>';
+    } else if (isApprouve) {
+        statusMessage = '<p style="color: var(--success-color); font-weight: 600; margin-top: 0.5rem;">✅ Disponibilité approuvée</p>';
+    } else if (isRefuse) {
+        statusMessage = '<p style="color: var(--error-color); font-weight: 600; margin-top: 0.5rem;">❌ Disponibilité refusée</p>';
+    }
     
     return `
         <div class="availability-buttons">
-            <button class="availability-btn disponible ${statut === 'disponible' ? 'active' : ''}" 
-                    onclick="setDisponibilite(${id}, 'disponible', '${type}')">
-                Disponible
+            <button class="availability-btn disponible ${isEnAttente || isApprouve || statut === 'disponible' ? 'active' : ''}" 
+                    onclick="setDisponibilite(${id}, 'disponible', '${type}')"
+                    ${isEnAttente || isApprouve || isRefuse ? 'disabled' : ''}>
+                ${isEnAttente ? '⏳ En attente...' : 'Disponible'}
             </button>
             <button class="availability-btn peut-etre ${statut === 'peut_etre' ? 'active' : ''}" 
-                    onclick="setDisponibilite(${id}, 'peut_etre', '${type}')">
+                    onclick="setDisponibilite(${id}, 'peut_etre', '${type}')"
+                    ${isEnAttente || isApprouve || isRefuse ? 'disabled' : ''}>
                 Peut-être
             </button>
             <button class="availability-btn pas-disponible ${statut === 'pas_disponible' ? 'active' : ''}" 
-                    onclick="setDisponibilite(${id}, 'pas_disponible', '${type}')">
+                    onclick="setDisponibilite(${id}, 'pas_disponible', '${type}')"
+                    ${isEnAttente || isApprouve || isRefuse ? 'disabled' : ''}>
                 Pas disponible
             </button>
+            ${statusMessage}
         </div>
     `;
 }
@@ -174,7 +190,7 @@ async function setDisponibilite(id, statut, type) {
         }
         
         const messages = {
-            disponible: '✨ Disponibilité enregistrée ! Vous êtes disponible 🟢',
+            disponible: '⏳ Demande de disponibilité envoyée ! En attente d\'approbation par l\'association 🔵',
             peut_etre: '🤔 Disponibilité enregistrée ! Peut-être disponible 🟡',
             pas_disponible: '❌ Disponibilité enregistrée ! Pas disponible 🔴'
         };
@@ -192,18 +208,208 @@ async function setDisponibilite(id, statut, type) {
 
 async function loadDisponibilites(evenementId) {
     try {
-        const disponibilites = await API.disponibilites.getByEvenement(evenementId);
+        const data = await API.disponibilites.getByEvenement(evenementId);
         
-        const html = `
-            <div class="card">
-                <h3>Disponibilités des bénévoles</h3>
-                ${JSON.stringify(disponibilites, null, 2)}
-            </div>
+        let html = `
+            <div class="card" style="margin-top: 2rem;">
+                <h3>📊 Disponibilités des bénévoles</h3>
         `;
+        
+        if (data.type_planification === 'creneaux' && data.creneaux) {
+            html += '<div style="display: grid; gap: 1.5rem; margin-top: 1.5rem;">';
+            
+            data.creneaux.forEach(creneau => {
+                const currentEventId = data.evenement_id || evenementId;
+                const enAttente = creneau.disponibilites.filter(d => d.statut === 'en_attente_approbation');
+                const disponibles = creneau.disponibilites.filter(d => d.statut === 'approuve' || d.statut === 'disponible');
+                const peutEtre = creneau.disponibilites.filter(d => d.statut === 'peut_etre');
+                const pasDisponibles = creneau.disponibilites.filter(d => d.statut === 'pas_disponible');
+                const refuses = creneau.disponibilites.filter(d => d.statut === 'refuse');
+                
+                html += `
+                    <div style="padding: 1.5rem; background: var(--bg-light); border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; color: var(--accent-color);">
+                                🕐 ${creneau.heure_debut.substring(0, 5)} - ${creneau.heure_fin.substring(0, 5)}
+                            </h4>
+                            <span class="badge badge-info">
+                                ${disponibles.length}/${creneau.nombre_personnes_requises} disponible(s)
+                            </span>
+                        </div>
+                        
+                        <div style="display: grid; gap: 1rem; margin-top: 1rem;">
+                            ${enAttente.length > 0 ? `
+                                <div>
+                                    <strong style="color: #007bff;">⏳ En attente d'approbation (${enAttente.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${enAttente.map(d => `
+                                            <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span>${d.prenom} ${d.nom}</span>
+                                                <div>
+                                                    <button class="btn btn-success btn-sm" onclick="approuverDisponibilite(${d.disponibilite_id}, ${currentEventId})" style="margin-right: 0.5rem;">
+                                                        ✅ Approuver
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" onclick="refuserDisponibilite(${d.disponibilite_id}, ${currentEventId})">
+                                                        ❌ Refuser
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${disponibles.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--success-color);">✅ Disponibles (${disponibles.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${disponibles.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : enAttente.length === 0 ? '<p style="color: var(--text-light);">Aucun bénévole disponible pour ce créneau.</p>' : ''}
+                            
+                            ${peutEtre.length > 0 ? `
+                                <div>
+                                    <strong style="color: #ffa500;">🤔 Peut-être (${peutEtre.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${peutEtre.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${pasDisponibles.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--error-color);">❌ Pas disponibles (${pasDisponibles.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${pasDisponibles.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${refuses.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--error-color); opacity: 0.7;">🚫 Refusés (${refuses.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${refuses.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${disponibles.length < creneau.nombre_personnes_requises ? `
+                            <p style="margin-top: 1rem; color: var(--warning-color); font-weight: 600;">
+                                ⚠️ Manque ${creneau.nombre_personnes_requises - disponibles.length} personne(s)
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        } else if (data.type_planification === 'taches' && data.taches) {
+            html += '<div style="display: grid; gap: 1.5rem; margin-top: 1.5rem;">';
+            
+            data.taches.forEach(tache => {
+                const currentEventId = data.evenement_id || evenementId;
+                const enAttente = tache.disponibilites.filter(d => d.statut === 'en_attente_approbation');
+                const disponibles = tache.disponibilites.filter(d => d.statut === 'approuve' || d.statut === 'disponible');
+                const peutEtre = tache.disponibilites.filter(d => d.statut === 'peut_etre');
+                const pasDisponibles = tache.disponibilites.filter(d => d.statut === 'pas_disponible');
+                const refuses = tache.disponibilites.filter(d => d.statut === 'refuse');
+                
+                html += `
+                    <div style="padding: 1.5rem; background: var(--bg-light); border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; color: var(--accent-color);">📋 ${tache.tache_nom}</h4>
+                            <span class="badge badge-info">
+                                ${disponibles.length}/${tache.nombre_personnes_requises} disponible(s)
+                            </span>
+                        </div>
+                        
+                        <div style="display: grid; gap: 1rem; margin-top: 1rem;">
+                            ${enAttente.length > 0 ? `
+                                <div>
+                                    <strong style="color: #007bff;">⏳ En attente d'approbation (${enAttente.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${enAttente.map(d => `
+                                            <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span>${d.prenom} ${d.nom}</span>
+                                                <div>
+                                                    <button class="btn btn-success btn-sm" onclick="approuverDisponibilite(${d.disponibilite_id}, ${currentEventId})" style="margin-right: 0.5rem;">
+                                                        ✅ Approuver
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" onclick="refuserDisponibilite(${d.disponibilite_id}, ${currentEventId})">
+                                                        ❌ Refuser
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${disponibles.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--success-color);">✅ Disponibles (${disponibles.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${disponibles.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : enAttente.length === 0 ? '<p style="color: var(--text-light);">Aucun bénévole disponible pour cette tâche.</p>' : ''}
+                            
+                            ${peutEtre.length > 0 ? `
+                                <div>
+                                    <strong style="color: #ffa500;">🤔 Peut-être (${peutEtre.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${peutEtre.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${pasDisponibles.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--error-color);">❌ Pas disponibles (${pasDisponibles.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${pasDisponibles.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${refuses.length > 0 ? `
+                                <div>
+                                    <strong style="color: var(--error-color); opacity: 0.7;">🚫 Refusés (${refuses.length})</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${refuses.map(d => `<li>${d.prenom} ${d.nom}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${disponibles.length < tache.nombre_personnes_requises ? `
+                            <p style="margin-top: 1rem; color: var(--warning-color); font-weight: 600;">
+                                ⚠️ Manque ${tache.nombre_personnes_requises - disponibles.length} personne(s)
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        } else {
+            html += '<p style="color: var(--text-light); margin-top: 1rem;">Aucune disponibilité enregistrée pour le moment.</p>';
+        }
+        
+        html += '</div>';
         
         document.getElementById('eventDetails').innerHTML += html;
     } catch (error) {
         console.error('Erreur chargement disponibilités:', error);
+        document.getElementById('eventDetails').innerHTML += `
+            <div class="card" style="margin-top: 2rem;">
+                <h3>📊 Disponibilités des bénévoles</h3>
+                <p class="error-message">Erreur lors du chargement des disponibilités: ${error.message || 'Erreur inconnue'}</p>
+            </div>
+        `;
     }
 }
 
@@ -310,10 +516,44 @@ async function validerToutesAssignations(evenementId) {
     }
 }
 
+async function approuverDisponibilite(disponibiliteId, evenementId) {
+    try {
+        await API.disponibilites.approuver(disponibiliteId);
+        Toast.success('✅ Disponibilité approuvée ! Notification envoyée au bénévole 📧');
+        
+        // Recharger la page pour voir les changements
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('id');
+        loadEventDetails(eventId);
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de l\'approbation 😔');
+    }
+}
+
+async function refuserDisponibilite(disponibiliteId, evenementId) {
+    if (!confirm('Êtes-vous sûr de vouloir refuser cette demande de disponibilité ?')) {
+        return;
+    }
+    
+    try {
+        await API.disponibilites.refuser(disponibiliteId);
+        Toast.success('❌ Disponibilité refusée ! Notification envoyée au bénévole 📧');
+        
+        // Recharger la page pour voir les changements
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('id');
+        loadEventDetails(eventId);
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors du refus 😔');
+    }
+}
+
 window.setDisponibilite = setDisponibilite;
 window.generateAssignations = generateAssignations;
 window.viewProposedAssignations = viewProposedAssignations;
 window.validerAssignation = validerAssignation;
 window.supprimerAssignation = supprimerAssignation;
 window.validerToutesAssignations = validerToutesAssignations;
+window.approuverDisponibilite = approuverDisponibilite;
+window.refuserDisponibilite = refuserDisponibilite;
 

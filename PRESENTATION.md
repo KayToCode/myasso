@@ -1,6 +1,6 @@
 # 🎤 Présentation MyAsso - TP Kubernetes
 
-**Durée : 10 minutes** | **Binôme Cyber 3**
+**Durée : 10 minutes** | **Trinôme Cyber 3**
 
 ---
 
@@ -15,7 +15,7 @@
 │                                         │
 │  Déployée sur Kubernetes                │
 │                                         │
-│  Binôme Cyber 3                         │
+│  Trinôme Cyber 3                         │
 └─────────────────────────────────────────┘
 ```
 
@@ -85,36 +85,38 @@
 
 ---
 
-## 📋 SLIDE 4 : Architecture du Projet (1 minute)
+## 📋 SLIDE 4 : Architecture Complète du Projet (2 minutes 30 secondes)
 
 ### 🖥️ À AFFICHER À L'ÉCRAN :
+
+**Partie 1 - Architecture du Code Source :**
 ```
 ┌─────────────────────────────────────────┐
-│      Architecture du Projet             │
+│   ARCHITECTURE DU CODE SOURCE           │
 │                                         │
 │  MyAsso/                                │
 │  ├── frontend/          → Interface UI  │
+│  │   ├── *.html (pages)                │
+│  │   ├── css/style.css                 │
+│  │   └── js/*.js (logique)             │
 │  ├── backend/           → API REST      │
+│  │   ├── server.js                     │
+│  │   ├── routes/ (endpoints API)       │
+│  │   ├── middleware/ (auth JWT)        │
+│  │   └── services/ (logique métier)    │
 │  ├── k8s/              → Config K8s     │
-│  │   ├── deployment-*.yaml              │
-│  │   ├── service-*.yaml                 │
-│  │   ├── secret.yaml                    │
-│  │   └── configmap.yaml                 │
+│  │   ├── deployment-*.yaml             │
+│  │   ├── service-*.yaml                │
+│  │   ├── secret.yaml                   │
+│  │   └── configmap.yaml                │
 │  └── Dockerfile        → Image Docker   │
 └─────────────────────────────────────────┘
 ```
 
-### 🗣️ À DIRE :
-> "Le projet est organisé de manière claire avec trois dossiers principaux. Le frontend contient toutes les pages HTML, le CSS et le JavaScript. Le backend contient l'API REST avec les routes, la configuration et les middlewares d'authentification. Le dossier k8s contient tous les fichiers YAML de configuration Kubernetes : les deployments pour MySQL et le backend, les services pour exposer les applications, les secrets pour les mots de passe, et les configmaps pour la configuration. Enfin, le Dockerfile permet de construire l'image Docker du backend."
-
----
-
-## 📋 SLIDE 5 : Architecture Kubernetes (2 minutes)
-
-### 🖥️ À AFFICHER À L'ÉCRAN :
+**Partie 2 - Architecture Kubernetes (Déploiement) :**
 ```
 ┌─────────────────────────────────────────┐
-│   Architecture Kubernetes               │
+│   ARCHITECTURE KUBERNETES               │
 │                                         │
 │   ┌──────────────┐  ┌──────────────┐   │
 │   │ Backend Pod 1│  │ Backend Pod 2│   │
@@ -128,20 +130,26 @@
 │          │  (PVC 10Gi)     │           │
 │          └─────────────────┘           │
 │                                         │
-│  Ressources :                           │
-│  • 1 Pod MySQL (PVC persistant)        │
-│  • 2 Pods Backend (haute disponibilité)│
-│  • Secrets + ConfigMaps                 │
-│  • Services (ClusterIP + NodePort)      │
+│  Ressources Kubernetes :                │
+│  • Secrets (mots de passe)             │
+│  • ConfigMaps (configuration)          │
+│  • Services (ClusterIP + NodePort)     │
 └─────────────────────────────────────────┘
 ```
 
 ### 🗣️ À DIRE :
-> "Notre architecture Kubernetes est composée de trois composants principaux. D'abord, un Pod MySQL qui stocke toutes les données. Ce Pod utilise un PersistentVolumeClaim de 10 gigaoctets pour que les données persistent même après redémarrage. Ensuite, nous avons deux Pods backend en réplique pour assurer la haute disponibilité. Si un Pod tombe en panne, l'autre continue de fonctionner. Tous ces composants communiquent via des Services Kubernetes. Le service MySQL est en ClusterIP, donc interne au cluster, et le service backend est en NodePort pour être accessible de l'extérieur sur le port 30080. Nous utilisons aussi des Secrets pour stocker les mots de passe et des ConfigMaps pour la configuration."
+
+> "Pour bien comprendre notre projet, je vais vous expliquer deux aspects complémentaires : l'organisation du code source et l'architecture de déploiement sur Kubernetes.
+>
+> **Premièrement, l'architecture du code source.** Notre projet est structuré de manière claire et modulaire. Le dossier frontend contient toute l'interface utilisateur : les pages HTML, le CSS pour le style, et le JavaScript pour la logique côté client. Le dossier backend contient l'API REST avec Node.js et Express : les routes qui gèrent les endpoints comme l'authentification, la gestion des associations, des bénévoles et des événements. Il y a aussi des middlewares pour l'authentification JWT et des services pour la logique métier comme l'algorithme d'assignation automatique. Le dossier k8s contient tous les fichiers YAML de configuration Kubernetes : les deployments qui définissent comment déployer MySQL et le backend, les services pour la communication, les secrets pour les mots de passe sécurisés, et les configmaps pour la configuration. Enfin, le Dockerfile transforme tout ce code source en une image Docker prête à être déployée.
+>
+> **Deuxièmement, l'architecture Kubernetes une fois déployée.** Quand l'application tourne, nous avons trois composants principaux. Un Pod MySQL qui stocke toutes les données de l'application dans un volume persistant de 10 gigaoctets. Ce volume garantit que les données persistent même après redémarrage. Ensuite, nous avons deux Pods backend en réplique, chacun exécutant une instance de notre application Node.js. Cette configuration assure la haute disponibilité : si un Pod plante, l'autre continue de fonctionner et les utilisateurs ne voient aucune interruption. Tous ces composants communiquent via des Services Kubernetes : le service MySQL est en ClusterIP, donc accessible uniquement à l'intérieur du cluster pour la sécurité, et le service backend est en NodePort, accessible de l'extérieur sur le port 30080. Les Secrets stockent les mots de passe et la clé JWT, tandis que les ConfigMaps contiennent la configuration comme les ports et les noms de base de données.
+>
+> Le lien entre ces deux architectures ? Le Dockerfile transforme notre code source en image Docker, et les fichiers YAML Kubernetes déploient cette image dans des Pods qui communiquent via des Services."
 
 ---
 
-## 📋 SLIDE 6 : Processus de Déploiement (1 minute)
+## 📋 SLIDE 5 : Processus de Déploiement (1 minute)
 
 ### 🖥️ À AFFICHER À L'ÉCRAN :
 ```
@@ -175,7 +183,7 @@
 
 ---
 
-## 📋 SLIDE 7 : Points Techniques Importants (1 minute)
+## 📋 SLIDE 6 : Points Techniques Importants (1 minute)
 
 ### 🖥️ À AFFICHER À L'ÉCRAN :
 ```
@@ -207,7 +215,7 @@
 
 ---
 
-## 📋 SLIDE 8 : Démonstration + Vérification Kubernetes (1 minute 30)
+## 📋 SLIDE 7 : Démonstration + Vérification Kubernetes (1 minute 30)
 
 ### 🖥️ À AFFICHER À L'ÉCRAN :
 **SOIT** : Capture d'écran de l'application **SOIT** : Terminal avec commandes
@@ -233,7 +241,7 @@ Montrer :
 
 ---
 
-## 📋 SLIDE 9 : Conclusion (30 secondes)
+## 📋 SLIDE 8 : Conclusion (1 minute)
 
 ### 🖥️ À AFFICHER À L'ÉCRAN :
 ```
@@ -246,51 +254,24 @@ Montrer :
 │  • Déploiement Kubernetes               │
 │  • Persistance des données              │
 │  • Sécurité (Secrets, JWT)              │
+│  • Haute disponibilité (2 répliques)    │
 │                                         │
-│  📚 COMPÉTENCES :                       │
+│  📚 COMPÉTENCES DÉVELOPPÉES :           │
 │  • Full-Stack Development               │
-│  • Docker & Kubernetes                  │
-│  • Orchestration de conteneurs          │
+│  • Docker & Conteneurisation            │
+│  • Kubernetes & Orchestration           │
+│  • Architecture microservices           │
 │                                         │
-│  🎯 PROCHAINES ÉTAPES :                 │
-│  • Monitoring (Prometheus)              │
+│  🎯 PERSPECTIVES :                      │
+│  • Monitoring (Prometheus/Grafana)      │
 │  • CI/CD (GitHub Actions)               │
-│  • Cluster de production                │
+│  • Déploiement cloud (AWS/GCP/Azure)    │
+│  • Scaling automatique                  │
 └─────────────────────────────────────────┘
 ```
 
 ### 🗣️ À DIRE :
-> "Pour conclure, nous avons développé une application web complète, l'avons conteneurisée avec Docker et déployée sur Kubernetes avec tous les composants nécessaires : persistence, health checks, sécurité. Ce projet nous a permis de maîtriser le développement full-stack, Docker et Kubernetes. Pour la suite, nous pourrions ajouter du monitoring, mettre en place un pipeline CI/CD, ou déployer sur un cluster de production. Merci de votre attention, avez-vous des questions ?"
-
----
-
-
-### 🖥️ À AFFICHER À L'ÉCRAN :
-```
-┌─────────────────────────────────────────┐
-│         Conclusion                      │
-│                                         │
-│  ✅ RÉALISATIONS :                      │
-│  • Application web complète             │
-│  • Conteneurisation Docker              │
-│  • Déploiement Kubernetes               │
-│  • Persistance des données              │
-│  • Sécurité (Secrets, JWT)              │
-│                                         │
-│  📚 COMPÉTENCES :                       │
-│  • Full-Stack Development               │
-│  • Docker & Kubernetes                  │
-│  • Orchestration de conteneurs          │
-│                                         │
-│  🎯 PROCHAINES ÉTAPES :                 │
-│  • Monitoring (Prometheus)              │
-│  • CI/CD (GitHub Actions)               │
-│  • Cluster de production                │
-└─────────────────────────────────────────┘
-```
-
-### 🗣️ À DIRE :
-> "Pour conclure, nous avons développé une application web complète, l'avons conteneurisée avec Docker et déployée sur Kubernetes avec tous les composants nécessaires : persistence, health checks, sécurité. Ce projet nous a permis de maîtriser le développement full-stack, Docker et Kubernetes. Pour la suite, nous pourrions ajouter du monitoring, mettre en place un pipeline CI/CD, ou déployer sur un cluster de production. Merci de votre attention, avez-vous des questions ?"
+> "Pour conclure, nous avons développé une application web complète qui répond à un vrai besoin : faciliter la gestion des associations et de leurs bénévoles. Nous l'avons conteneurisée avec Docker et déployée sur Kubernetes avec tous les composants nécessaires : persistance des données, health checks pour la résilience, et sécurité avec les Secrets. L'architecture en 2 répliques garantit la haute disponibilité. Ce projet nous a permis de maîtriser le développement full-stack, Docker et Kubernetes. Pour la suite, nous pourrions ajouter du monitoring avec Prometheus, mettre en place un pipeline CI/CD avec GitHub Actions, ou déployer sur un cluster cloud de production avec scaling automatique. Merci de votre attention, avez-vous des questions ?"
 
 ---
 
@@ -303,12 +284,11 @@ Montrer :
 | 1 | Introduction | 30s | 0:30 |
 | 2 | Vue d'ensemble | 1:30 | 2:00 |
 | 3 | Technologies | 1:00 | 3:00 |
-| 4 | Architecture projet | 1:00 | 4:00 |
-| 5 | Architecture Kubernetes | 2:00 | 6:00 |
-| 6 | Processus de déploiement | 1:00 | 7:00 |
-| 7 | Points techniques | 1:00 | 8:00 |
-| 8 | Démonstration + Vérification | 1:30 | 9:30 |
-| 9 | Conclusion | 30s | **10:00** |
+| 4 | Architecture complète | 2:30 | 5:30 |
+| 5 | Processus de déploiement | 1:00 | 6:30 |
+| 6 | Points techniques | 1:00 | 7:30 |
+| 7 | Démonstration + Vérification | 1:30 | 9:00 |
+| 8 | Conclusion | 1:00 | **10:00** |
 
 **✅ Timing total : 10 minutes exactement**
 

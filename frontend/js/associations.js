@@ -28,13 +28,35 @@ async function loadAssociations() {
             const user = Auth.getCurrentUser();
             const isBenevole = user && user.type === 'benevole';
             
-            associations.forEach(asso => {
+            // Charger les statuts d'adhésion pour tous les bénévoles
+            const statutsPromises = isBenevole ? associations.map(asso => 
+                API.benevoles.getStatutAssociation(asso.id).catch(() => ({ statut: null }))
+            ) : [];
+            
+            const statuts = await Promise.all(statutsPromises);
+            
+            associations.forEach((asso, index) => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                const statut = isBenevole ? statuts[index]?.statut : null;
+                const isMember = statut === 'accepte';
+                const isPending = statut === 'en_attente';
+                
+                let buttonHtml = '';
+                if (isBenevole) {
+                    if (isMember) {
+                        buttonHtml = `<button class="btn btn-danger" onclick="quitterAssociation(${asso.id})"><span>🚪</span> Quitter</button>`;
+                    } else if (isPending) {
+                        buttonHtml = `<button class="btn btn-secondary" disabled><span>⏳</span> En attente</button>`;
+                    } else {
+                        buttonHtml = `<button class="btn btn-primary" onclick="rejoindreAssociation(${asso.id})"><span>✨</span> Rejoindre</button>`;
+                    }
+                }
+                
                 card.innerHTML = `
                     <div class="card-header">
                         <h3>🏢 ${asso.nom}</h3>
-                        ${isBenevole ? `<button class="btn btn-primary" onclick="rejoindreAssociation(${asso.id})"><span>✨</span> Rejoindre</button>` : ''}
+                        ${buttonHtml}
                     </div>
                     ${asso.description ? `<p style="margin-bottom: 1rem;"><strong>📝 Description:</strong><br>${asso.description}</p>` : ''}
                     ${asso.activites ? `<p style="margin-bottom: 1rem;"><strong>🎯 Activités:</strong><br>${asso.activites}</p>` : ''}
@@ -74,5 +96,30 @@ async function rejoindreAssociation(id) {
     }
 }
 
+async function quitterAssociation(id) {
+    if (!Auth.isAuthenticated() || !Auth.isBenevole()) {
+        return;
+    }
+    
+    // Première confirmation
+    if (!confirm('⚠️ Attention : Vous êtes sur le point de quitter cette association.\n\nÊtes-vous sûr de vouloir continuer ?')) {
+        return;
+    }
+    
+    // Deuxième confirmation
+    if (!confirm('🛑 Dernière confirmation : Cette action est irréversible.\n\nVoulez-vous vraiment quitter cette association ?')) {
+        return;
+    }
+    
+    try {
+        await API.benevoles.quitterAssociation(id);
+        Toast.success('✅ Vous avez quitté l\'association');
+        loadAssociations(); // Recharger la liste
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de la sortie de l\'association 😔');
+    }
+}
+
 window.rejoindreAssociation = rejoindreAssociation;
+window.quitterAssociation = quitterAssociation;
 

@@ -1,5 +1,7 @@
 // Configuration de l'API
-const API_BASE_URL = 'http://localhost:3000/api';
+// Utilise l'URL relative pour fonctionner avec n'importe quel déploiement
+// Quand le frontend est servi par le backend, l'URL relative fonctionne automatiquement
+const API_BASE_URL = window.location.origin + '/api';
 
 // Fonction pour obtenir le token depuis le localStorage
 function getToken() {
@@ -105,6 +107,12 @@ const benevolesAPI = {
         method: 'POST'
     }),
     
+    getStatutAssociation: (id) => apiRequest(`/benevoles/associations/${id}/statut`),
+    
+    quitterAssociation: (id) => apiRequest(`/benevoles/associations/${id}/quitter`, {
+        method: 'DELETE'
+    }),
+    
     getMesAssociations: () => apiRequest('/benevoles/associations/mes-associations'),
     
     getAssignations: () => apiRequest('/benevoles/assignations')
@@ -129,6 +137,10 @@ const evenementsAPI = {
         body: JSON.stringify(data)
     }),
     
+    delete: (id) => apiRequest(`/evenements/${id}`, {
+        method: 'DELETE'
+    }),
+    
     getPublicDisponibles: () => apiRequest('/evenements/public/disponibles'),
     
     getBenevoleMesAssociations: () => apiRequest('/evenements/benevole/mes-associations')
@@ -148,7 +160,15 @@ const disponibilitesAPI = {
     
     getByEvenement: (id) => apiRequest(`/disponibilites/evenement/${id}`),
     
-    getBenevoleByEvenement: (id) => apiRequest(`/disponibilites/benevole/evenement/${id}`)
+    getBenevoleByEvenement: (id) => apiRequest(`/disponibilites/benevole/evenement/${id}`),
+    
+    approuver: (id) => apiRequest(`/disponibilites/${id}/approuver`, {
+        method: 'PUT'
+    }),
+    
+    refuser: (id) => apiRequest(`/disponibilites/${id}/refuser`, {
+        method: 'PUT'
+    })
 };
 
 // API Assignations

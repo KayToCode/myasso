@@ -256,6 +256,9 @@ async function marquerToutLu() {
     }
 }
 
+// Initialiser le formulaire de profil une seule fois
+let profileFormInitialized = false;
+
 async function loadProfile() {
     try {
         const profile = await API.benevoles.getProfile();
@@ -264,21 +267,117 @@ async function loadProfile() {
         document.getElementById('profile_prenom').value = profile.prenom || '';
         document.getElementById('profile_telephone').value = profile.telephone || '';
         
-        document.getElementById('profileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await API.benevoles.updateProfile({
-                    nom: document.getElementById('profile_nom').value,
-                    prenom: document.getElementById('profile_prenom').value,
-                    telephone: document.getElementById('profile_telephone').value
-                });
-                Toast.success('✨ Profil mis à jour avec succès ! 🎉');
-            } catch (error) {
-                Toast.error(error.message || 'Erreur lors de la mise à jour 😔');
-            }
-        });
+        // Charger et afficher les associations
+        await loadAssociationsInProfile();
+        
+        // Initialiser le listener du formulaire une seule fois
+        if (!profileFormInitialized) {
+            document.getElementById('profileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                    await API.benevoles.updateProfile({
+                        nom: document.getElementById('profile_nom').value,
+                        prenom: document.getElementById('profile_prenom').value,
+                        telephone: document.getElementById('profile_telephone').value
+                    });
+                    Toast.success('✨ Profil mis à jour avec succès ! 🎉');
+                } catch (error) {
+                    Toast.error(error.message || 'Erreur lors de la mise à jour 😔');
+                }
+            });
+            profileFormInitialized = true;
+        }
     } catch (error) {
         console.error('Erreur chargement profil:', error);
+    }
+}
+
+async function loadAssociationsInProfile() {
+    try {
+        const associations = await API.benevoles.getMesAssociations();
+        
+        // Vérifier si la section existe déjà, sinon la créer
+        let associationsDiv = document.getElementById('profileAssociations');
+        if (!associationsDiv) {
+            associationsDiv = document.createElement('div');
+            associationsDiv.id = 'profileAssociations';
+            associationsDiv.style.marginTop = '2rem';
+            document.getElementById('profileForm').parentElement.appendChild(associationsDiv);
+        }
+        
+        associationsDiv.innerHTML = '';
+        
+        if (associations.length === 0) {
+            associationsDiv.innerHTML = `
+                <div class="card" style="margin-top: 2rem;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1rem;">🏛️ Mes associations</h3>
+                    <p style="color: var(--text-light);">Vous n'êtes membre d'aucune association pour le moment.</p>
+                    <a href="associations.html" class="btn btn-primary" style="margin-top: 1rem; display: inline-block;">
+                        <span>🔍</span> Découvrir les associations
+                    </a>
+                </div>
+            `;
+        } else {
+            let html = `
+                <div class="card" style="margin-top: 2rem;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1rem;">🏛️ Mes associations (${associations.length})</h3>
+                    <div style="display: grid; gap: 1rem;">
+            `;
+            
+            associations.forEach(asso => {
+                html += `
+                    <div style="padding: 1rem; background: var(--bg-light); border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h4 style="margin: 0; color: var(--accent-color);">🏢 ${asso.nom}</h4>
+                            <span class="badge badge-success">Membre</span>
+                        </div>
+                        ${asso.description ? `<p style="color: var(--text-light); margin: 0.5rem 0;">${asso.description}</p>` : ''}
+                        <div style="margin-top: 1rem;">
+                            <a href="association-detail.html?id=${asso.id}" style="color: var(--accent-color); font-weight: 600; text-decoration: none; margin-right: 1rem;">
+                                🔍 Voir les détails
+                            </a>
+                            <button class="btn btn-danger btn-sm" onclick="quitterAssociationFromProfile(${asso.id}, '${asso.nom}')" style="display: inline-block;">
+                                🚪 Quitter
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            associationsDiv.innerHTML = html;
+        }
+    } catch (error) {
+        console.error('Erreur chargement associations dans profil:', error);
+    }
+}
+
+async function quitterAssociationFromProfile(id, nom) {
+    // Première confirmation
+    if (!confirm(`⚠️ Attention : Vous êtes sur le point de quitter l'association "${nom}".\n\nÊtes-vous sûr de vouloir continuer ?`)) {
+        return;
+    }
+    
+    // Deuxième confirmation
+    if (!confirm(`🛑 Dernière confirmation : Cette action est irréversible.\n\nVoulez-vous vraiment quitter l'association "${nom}" ?`)) {
+        return;
+    }
+    
+    try {
+        await API.benevoles.quitterAssociation(id);
+        Toast.success(`✅ Vous avez quitté l'association "${nom}"`);
+        // Recharger les associations dans le profil
+        await loadAssociationsInProfile();
+        // Recharger aussi l'onglet associations
+        if (document.getElementById('tabAssociations').classList.contains('active')) {
+            loadAssociations();
+        }
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de la sortie de l\'association 😔');
     }
 }
 
@@ -311,4 +410,5 @@ window.switchToProfilTab = switchToProfilTab;
 window.viewEvent = viewEvent;
 window.marquerLu = marquerLu;
 window.marquerToutLu = marquerToutLu;
+window.quitterAssociationFromProfile = quitterAssociationFromProfile;
 

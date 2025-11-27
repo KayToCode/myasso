@@ -208,37 +208,52 @@ minikube status
 **Résultat attendu** : Tous les composants doivent être en état "Running"
 
 #### 1.3. Configurer l'Environnement Docker pour Minikube
-```powershell
-# ⚠️ IMPORTANT : Cette commande configure Docker pour utiliser l'environnement Minikube
-# Cela permet de construire des images Docker accessibles par Minikube
-minikube docker-env | Invoke-Expression
+**⚠️ IMPORTANT** : Cette étape configure Docker pour utiliser l'environnement Minikube. Cela permet de construire des images Docker accessibles par Minikube.
 
-# Vérifier que Docker est bien configuré
+**Windows (PowerShell) :**
+```powershell
+minikube docker-env | Invoke-Expression
 docker ps
 ```
 
-**💡 Note** : Si vous ouvrez un nouveau terminal PowerShell, vous devrez réexécuter cette commande.
+**Linux / Mac (Bash) :**
+```bash
+eval $(minikube docker-env)
+docker ps
+```
+
+**💡 Note** : Si vous ouvrez un nouveau terminal, vous devrez réexécuter cette commande.
 
 ---
 
 ### Étape 2 : Construction de l'Image Docker
 
 #### 2.1. Naviguer vers la Racine du Projet
+**Windows :**
 ```powershell
-# Remplacez le chemin par le chemin de votre projet
 cd D:\MyAsso
 # ou
 cd C:\Users\VotreNom\MyAsso
 ```
 
+**Linux / Mac :**
+```bash
+cd ~/MyAsso
+# ou
+cd /chemin/vers/MyAsso
+```
+
 #### 2.2. Construire l'Image Docker
-```powershell
+```bash
 # Construire l'image Docker du backend
 # Le Dockerfile à la racine du projet sera utilisé
 docker build -t myasso-backend:latest .
 
 # Vérifier que l'image a été créée
+# Windows (PowerShell) :
 docker images | Select-String "myasso-backend"
+# Linux / Mac :
+docker images | grep "myasso-backend"
 ```
 
 **Résultat attendu** : Vous devriez voir `myasso-backend` avec le tag `latest` dans la liste des images.
@@ -297,7 +312,7 @@ cd k8s
 ```
 
 #### 4.2. Déployer les Secrets
-```powershell
+```bash
 # Créer les secrets (mots de passe MySQL, clé JWT)
 kubectl apply -f secret.yaml
 
@@ -308,7 +323,7 @@ kubectl get secrets
 **Résultat attendu** : Vous devriez voir `myasso-secrets` dans la liste.
 
 #### 4.3. Déployer les ConfigMaps
-```powershell
+```bash
 # Créer les ConfigMaps (configuration non sensible)
 kubectl apply -f configmap.yaml
 kubectl apply -f configmap-init-db.yaml
@@ -324,7 +339,7 @@ kubectl get configmaps
 - `configmap-init-db.yaml` : Contient le script SQL d'initialisation qui crée toutes les tables
 
 #### 4.4. Créer le Volume Persistant (PVC)
-```powershell
+```bash
 # Créer le PersistentVolumeClaim pour MySQL
 # Ce volume permet de conserver les données même si le Pod MySQL redémarre
 kubectl apply -f persistentvolumeclaim.yaml
@@ -338,7 +353,7 @@ kubectl get pvc
 **💡 Explication** : Le PVC réserve 10Gi d'espace de stockage pour MySQL. Les données seront persistantes même après redémarrage.
 
 #### 4.5. Déployer MySQL
-```powershell
+```bash
 # Déployer le Pod MySQL
 kubectl apply -f deployment-mysql.yaml
 
@@ -356,7 +371,7 @@ kubectl get pods -l app=mysql
 - `service-db.yaml` : Crée un service ClusterIP qui permet au backend de se connecter à MySQL via le nom `mysql-service`
 
 #### 4.6. Attendre que MySQL soit Prêt
-```powershell
+```bash
 # Attendre que MySQL soit complètement démarré et prêt
 # Cette commande attend jusqu'à 2 minutes que le Pod soit en état "Ready"
 kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
@@ -376,7 +391,7 @@ kubectl logs -l app=mysql --tail=20
 - Grâce au PVC (PersistentVolumeClaim), les données sont conservées entre les redémarrages, donc le script ne sera **PAS réexécuté** lors des prochains déploiements
 
 #### 4.7. Déployer le Backend
-```powershell
+```bash
 # Déployer les Pods Backend (2 répliques pour la haute disponibilité)
 kubectl apply -f deployment-backend.yaml
 
@@ -400,7 +415,7 @@ kubectl get pods -l app=backend
 ### Étape 5 : Vérification du Déploiement
 
 #### 5.1. Vérifier l'État des Pods
-```powershell
+```bash
 # Voir tous les Pods et leur état
 kubectl get pods
 
@@ -414,7 +429,7 @@ kubectl get pods
 **✅ Tous les Pods doivent être en état `Running` et `READY 1/1`**
 
 #### 5.2. Vérifier les Services
-```powershell
+```bash
 # Voir tous les Services
 kubectl get services
 
@@ -427,7 +442,7 @@ kubectl get services
 **✅ Les deux services doivent être présents**
 
 #### 5.3. Vérifier les Logs (Optionnel)
-```powershell
+```bash
 # Voir les logs du backend pour vérifier qu'il démarre correctement
 kubectl logs -l app=backend --tail=30
 
@@ -442,7 +457,7 @@ kubectl logs -l app=mysql --tail=30
 ### Étape 6 : Accéder à l'Application
 
 #### 6.1. Méthode 1 : Via Minikube Service (Recommandé)
-```powershell
+```bash
 # Cette commande ouvre automatiquement votre navigateur
 minikube service backend-service
 ```
@@ -450,8 +465,8 @@ minikube service backend-service
 **Résultat** : Votre navigateur s'ouvre automatiquement sur l'URL de l'application.
 
 #### 6.2. Méthode 2 : Via Port-Forward
-```powershell
-# Dans un terminal PowerShell, exécutez :
+```bash
+# Dans un terminal, exécutez :
 kubectl port-forward service/backend-service 3000:3000
 
 # Puis ouvrez votre navigateur sur : http://localhost:3000
@@ -460,7 +475,7 @@ kubectl port-forward service/backend-service 3000:3000
 **💡 Note** : Gardez ce terminal ouvert pendant que vous utilisez l'application.
 
 #### 6.3. Méthode 3 : Via NodePort Directement
-```powershell
+```bash
 # Obtenir l'IP de Minikube
 minikube ip
 
@@ -1377,6 +1392,22 @@ Le **PersistentVolumeClaim (PVC)** garantit que **toutes vos données sont sauve
 - ✅ Supprimez les Pods (`kubectl delete pods ...`)
 - ✅ Redéployez l'application
 
+### 🌍 Compatibilité Multi-OS
+
+**✅ La persistance des données fonctionne de la MÊME manière sur Windows, Mac et Linux !**
+
+**Pourquoi ?**
+- Le PVC est géré par Kubernetes, pas par l'OS
+- Minikube crée un volume Docker qui fonctionne identiquement sur tous les OS
+- Les données sont stockées dans le système de fichiers de Minikube (VM Docker)
+- Peu importe l'OS hôte, le comportement est identique
+
+**Conséquence** :
+- ✅ Déployez sur Windows → Les données sont persistantes
+- ✅ Déployez sur Mac → Les données sont persistantes
+- ✅ Déployez sur Linux → Les données sont persistantes
+- ✅ Migrez d'un OS à un autre → Les données peuvent être exportées/importées si besoin
+
 ### 🧪 Test de Persistance
 
 **Scénario : Ajouter des utilisateurs puis relancer**
@@ -1435,15 +1466,37 @@ EXIT;
 **❌ Les données sont perdues uniquement si :**
 
 - Vous supprimez le PVC : `kubectl delete pvc mysql-pvc`
-- Vous supprimez Minikube : `minikube delete`
-- Vous supprimez manuellement le volume Docker
+- Vous supprimez Minikube : `minikube delete` (supprime toute la VM Minikube)
+- Vous supprimez manuellement le volume Docker de Minikube
 
 **✅ Les données SONT conservées si :**
 
-- Vous redémarrez Minikube
+- Vous redémarrez Minikube (`minikube stop` / `minikube start`)
 - Vous supprimez et recréez les Pods
 - Vous redéployez l'application
 - Vous modifiez les ConfigMaps/Secrets
+- Vous changez d'ordinateur (si vous exportez le volume) - voir section Migration ci-dessous
+
+### 🔄 Migration des Données entre Machines
+
+**Comment migrer vos données vers une autre machine ?**
+
+Si vous voulez transférer vos données MySQL d'une machine à une autre :
+
+#### Option 1 : Export/Import SQL (Recommandé)
+```bash
+# Sur l'ancienne machine : Exporter les données
+kubectl exec deployment/mysql-deployment -- mysqldump -uroot -p myasso > backup.sql
+# Entrer le mot de passe : root
+
+# Transférer backup.sql vers la nouvelle machine
+
+# Sur la nouvelle machine : Importer les données
+kubectl exec -i deployment/mysql-deployment -- mysql -uroot -p myasso < backup.sql
+```
+
+#### Option 2 : Copier le volume Docker Minikube
+Plus complexe, nécessite d'accéder au volume Docker de Minikube directement.
 
 ---
 

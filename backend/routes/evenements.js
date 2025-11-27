@@ -233,5 +233,33 @@ router.get('/benevole/mes-associations', authenticateToken, isBenevole, async (r
   }
 });
 
+// Supprimer un événement (association uniquement)
+router.delete('/:id', authenticateToken, isAssociation, async (req, res) => {
+  try {
+    const evenementId = req.params.id;
+
+    // Vérifier que l'événement appartient à l'association
+    const [check] = await db.promise().execute(
+      'SELECT id FROM evenements WHERE id = ? AND association_id = ?',
+      [evenementId, req.user.id]
+    );
+
+    if (check.length === 0) {
+      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    }
+
+    // Supprimer l'événement (les contraintes CASCADE supprimeront automatiquement les créneaux, tâches, disponibilités, etc.)
+    await db.promise().execute(
+      'DELETE FROM evenements WHERE id = ?',
+      [evenementId]
+    );
+
+    res.json({ message: 'Événement supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur suppression événement:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de l\'événement' });
+  }
+});
+
 module.exports = router;
 

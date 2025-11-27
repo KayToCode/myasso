@@ -96,6 +96,54 @@ router.get('/associations/mes-associations', authenticateToken, isBenevole, asyn
   }
 });
 
+// Vérifier le statut d'adhésion d'un bénévole à une association
+router.get('/associations/:id/statut', authenticateToken, isBenevole, async (req, res) => {
+  try {
+    const [rows] = await db.promise().execute(
+      `SELECT statut FROM benevole_associations 
+       WHERE benevole_id = ? AND association_id = ?`,
+      [req.user.id, req.params.id]
+    );
+
+    if (rows.length === 0) {
+      return res.json({ statut: null });
+    }
+
+    res.json({ statut: rows[0].statut });
+  } catch (error) {
+    console.error('Erreur vérification statut:', error);
+    res.status(500).json({ error: 'Erreur lors de la vérification du statut' });
+  }
+});
+
+// Quitter une association
+router.delete('/associations/:id/quitter', authenticateToken, isBenevole, async (req, res) => {
+  try {
+    const associationId = req.params.id;
+
+    // Vérifier si la relation existe
+    const [existing] = await db.promise().execute(
+      'SELECT * FROM benevole_associations WHERE benevole_id = ? AND association_id = ?',
+      [req.user.id, associationId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Vous n\'êtes pas membre de cette association' });
+    }
+
+    // Supprimer la relation
+    await db.promise().execute(
+      'DELETE FROM benevole_associations WHERE benevole_id = ? AND association_id = ?',
+      [req.user.id, associationId]
+    );
+
+    res.json({ message: 'Vous avez quitté l\'association avec succès' });
+  } catch (error) {
+    console.error('Erreur quitter association:', error);
+    res.status(500).json({ error: 'Erreur lors de la sortie de l\'association' });
+  }
+});
+
 // Obtenir les assignations du bénévole
 router.get('/assignations', authenticateToken, isBenevole, async (req, res) => {
   try {

@@ -136,6 +136,8 @@ async function loadEvenements() {
                             <span class="badge badge-${evenement.statut === 'publie' ? 'success' : 'warning'}">${evenement.statut}</span>
                             <button class="btn btn-primary" onclick="viewEvent(${evenement.id})">Voir</button>
                             <button class="btn btn-secondary" onclick="editEvent(${evenement.id})">Modifier</button>
+                            ${evenement.statut === 'brouillon' ? `<button class="btn btn-success" onclick="publierEvenement(${evenement.id})">📢 Publier</button>` : ''}
+                            <button class="btn btn-danger" onclick="supprimerEvenement(${evenement.id}, '${evenement.titre}')">🗑️ Supprimer</button>
                         </div>
                     </div>
                     <p>${evenement.description || ''}</p>
@@ -426,6 +428,39 @@ function editEvent(id) {
     window.location.href = `evenement-edit.html?id=${id}`;
 }
 
+async function publierEvenement(id) {
+    if (!confirm('Êtes-vous sûr de vouloir publier cet événement ? Il sera visible par tous les bénévoles.')) {
+        return;
+    }
+    
+    try {
+        await API.evenements.update(id, { statut: 'publie' });
+        Toast.success('✨ Événement publié avec succès ! 📢');
+        loadEvenements(); // Recharger la liste
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de la publication de l\'événement 😔');
+    }
+}
+
+async function supprimerEvenement(id, titre) {
+    if (!confirm(`⚠️ Attention : Vous êtes sur le point de supprimer l'événement "${titre}".\n\nCette action est irréversible et supprimera également tous les créneaux, tâches et disponibilités associés.\n\nÊtes-vous sûr de vouloir continuer ?`)) {
+        return;
+    }
+    
+    // Deuxième confirmation
+    if (!confirm(`🛑 Dernière confirmation : Supprimer définitivement l'événement "${titre}" ?`)) {
+        return;
+    }
+    
+    try {
+        await API.evenements.delete(id);
+        Toast.success('🗑️ Événement supprimé avec succès !');
+        loadEvenements(); // Recharger la liste
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de la suppression de l\'événement 😔');
+    }
+}
+
 // Fonction pour passer à l'onglet profil depuis le header
 function switchToProfilTab() {
     // Si on est déjà sur le dashboard, changer l'onglet
@@ -463,4 +498,6 @@ window.cancelCreateAnnonce = cancelCreateAnnonce;
 window.deleteAnnonce = deleteAnnonce;
 window.viewEvent = viewEvent;
 window.editEvent = editEvent;
+window.publierEvenement = publierEvenement;
+window.supprimerEvenement = supprimerEvenement;
 

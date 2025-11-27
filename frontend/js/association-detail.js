@@ -37,7 +37,31 @@ async function loadAssociationDetails(id) {
         
         const user = Auth.getCurrentUser();
         const isBenevole = user && user.type === 'benevole';
-        const isAlreadyMember = false; // TODO: vérifier si le bénévole est déjà membre
+        
+        // Vérifier le statut d'adhésion
+        let statut = null;
+        if (isBenevole) {
+            try {
+                const statutData = await API.benevoles.getStatutAssociation(id);
+                statut = statutData.statut;
+            } catch (error) {
+                console.error('Erreur récupération statut:', error);
+            }
+        }
+        
+        const isMember = statut === 'accepte';
+        const isPending = statut === 'en_attente';
+        
+        let buttonHtml = '';
+        if (isBenevole) {
+            if (isMember) {
+                buttonHtml = `<button class="btn btn-danger" onclick="quitterAssociation(${id})"><span>🚪</span> Quitter cette association</button>`;
+            } else if (isPending) {
+                buttonHtml = `<button class="btn btn-secondary" disabled><span>⏳</span> Demande en attente</button>`;
+            } else {
+                buttonHtml = `<button class="btn btn-primary" onclick="rejoindreAssociation(${id})"><span>✨</span> Rejoindre cette association</button>`;
+            }
+        }
         
         let html = `
             <div class="card" style="margin-top: 2rem;">
@@ -45,11 +69,7 @@ async function loadAssociationDetails(id) {
                     <h2 style="font-size: 2rem; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                         🏢 ${association.nom}
                     </h2>
-                    ${isBenevole && !isAlreadyMember ? `
-                        <button class="btn btn-primary" onclick="rejoindreAssociation(${id})">
-                            <span>✨</span> Rejoindre cette association
-                        </button>
-                    ` : ''}
+                    ${buttonHtml}
                 </div>
                 ${association.description ? `
                     <div style="margin-bottom: 1.5rem;">
@@ -86,46 +106,70 @@ async function loadAssociationDetails(id) {
 
 async function loadEvenements(associationId) {
     try {
-        const evenements = await API.evenements.getByAssociation(associationId, 'publie');
+        // Charger TOUS les événements (brouillon + publiés) pour cette association
+        const evenements = await API.evenements.getByAssociation(associationId);
         
         const listDiv = document.getElementById('evenementsList');
         listDiv.innerHTML = '';
         
-        if (evenements.length === 0) {
+        if (!evenements || evenements.length === 0) {
             listDiv.innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--border-radius); box-shadow: var(--shadow-md);">
                     <p style="font-size: 1.2rem; color: var(--text-light);">
-                        📭 Aucun événement publié pour le moment.
+                        📭 Aucun événement pour le moment.
                     </p>
                 </div>
             `;
         } else {
-            evenements.forEach(evenement => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div class="card-header">
-                        <h3>${evenement.titre}</h3>
-                        <a href="evenement-detail.html?id=${evenement.id}" class="btn btn-primary">
-                            <span>👁️</span> Voir détails
-                        </a>
-                    </div>
-                    ${evenement.description ? `<p style="margin-bottom: 1rem;">${evenement.description}</p>` : ''}
-                    <p style="color: var(--text-light);">
-                        <strong>📅 Date:</strong> ${new Date(evenement.date_debut).toLocaleString('fr-FR')} - ${new Date(evenement.date_fin).toLocaleString('fr-FR')}
-                    </p>
-                    <p style="color: var(--text-light);">
-                        <strong>📋 Type:</strong> ${evenement.type_planification === 'creneaux' ? 'Créneaux horaires' : 'Tâches'}
-                    </p>
-                `;
-                listDiv.appendChild(card);
+            // Filtrer les événements : ne montrer que ceux publiés ou en cours (date_fin >= aujourd'hui)
+            const maintenant = new Date();
+            const evenementsFiltres = evenements.filter(e => {
+                const dateFin = new Date(e.date_fin);
+                return e.statut === 'publie' && dateFin >= maintenant;
             });
+            
+            if (evenementsFiltres.length === 0) {
+                listDiv.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--border-radius); box-shadow: var(--shadow-md);">
+                        <p style="font-size: 1.2rem; color: var(--text-light);">
+                            📭 Aucun événement en cours ou à venir pour le moment.
+                        </p>
+                    </div>
+                `;
+            } else {
+                evenementsFiltres.forEach(evenement => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    const dateDebut = new Date(evenement.date_debut);
+                    const dateFin = new Date(evenement.date_fin);
+                    const maintenant = new Date();
+                    const estEnCours = dateDebut <= maintenant && dateFin >= maintenant;
+                    const badgeStatut = estEnCours ? '<span class="badge badge-success">En cours</span>' : '<span class="badge badge-info">À venir</span>';
+                    
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <h3>${evenement.titre} ${badgeStatut}</h3>
+                            <a href="evenement-detail.html?id=${evenement.id}" class="btn btn-primary">
+                                <span>👁️</span> Voir détails
+                            </a>
+                        </div>
+                        ${evenement.description ? `<p style="margin-bottom: 1rem;">${evenement.description}</p>` : ''}
+                        <p style="color: var(--text-light);">
+                            <strong>📅 Date:</strong> ${dateDebut.toLocaleString('fr-FR')} - ${dateFin.toLocaleString('fr-FR')}
+                        </p>
+                        <p style="color: var(--text-light);">
+                            <strong>📋 Type:</strong> ${evenement.type_planification === 'creneaux' ? 'Créneaux horaires' : 'Tâches'}
+                        </p>
+                    `;
+                    listDiv.appendChild(card);
+                });
+            }
         }
     } catch (error) {
         console.error('Erreur chargement événements:', error);
         document.getElementById('evenementsList').innerHTML = `
             <div class="error-message">
-                Erreur lors du chargement des événements
+                Erreur lors du chargement des événements: ${error.message || 'Erreur inconnue'}
             </div>
         `;
     }
@@ -189,6 +233,32 @@ async function rejoindreAssociation(id) {
     }
 }
 
+async function quitterAssociation(id) {
+    if (!Auth.isAuthenticated() || !Auth.isBenevole()) {
+        return;
+    }
+    
+    // Première confirmation
+    if (!confirm('⚠️ Attention : Vous êtes sur le point de quitter cette association.\n\nÊtes-vous sûr de vouloir continuer ?')) {
+        return;
+    }
+    
+    // Deuxième confirmation
+    if (!confirm('🛑 Dernière confirmation : Cette action est irréversible.\n\nVoulez-vous vraiment quitter cette association ?')) {
+        return;
+    }
+    
+    try {
+        await API.benevoles.quitterAssociation(id);
+        Toast.success('✅ Vous avez quitté l\'association');
+        // Recharger les détails pour mettre à jour le bouton
+        loadAssociationDetails(id);
+    } catch (error) {
+        Toast.error(error.message || 'Erreur lors de la sortie de l\'association 😔');
+    }
+}
+
 window.switchTab = switchTab;
 window.rejoindreAssociation = rejoindreAssociation;
+window.quitterAssociation = quitterAssociation;
 
